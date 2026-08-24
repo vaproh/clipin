@@ -1,10 +1,18 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import { useRoute } from '#app'
-import { LayoutDashboard, Megaphone, Video, Wallet, CreditCard, Settings, ChevronRight } from 'lucide-vue-next'
+import { LayoutDashboard, Megaphone, Video, Wallet, CreditCard, Settings } from 'lucide-vue-next'
 
 const route = useRoute()
 
-const navItems = [
+interface NavItem {
+  name: string
+  path: string
+  icon: Component
+  badge?: string
+}
+
+const navItems: NavItem[] = [
   { name: 'Overview', path: '/app', icon: LayoutDashboard },
   { name: 'Campaigns', path: '/app/campaigns', icon: Megaphone, badge: 'SOON' },
   { name: 'Submissions', path: '/app/submissions', icon: Video, badge: 'SOON' },

@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import { Search, Scissors, ShieldCheck, Wallet } from 'lucide-vue-next'
 
-const steps = [
+interface Step {
+  number: string
+  icon: Component
+  title: string
+  description: string
+}
+
+const steps: Step[] = [
   {
     number: '01',
     icon: Search,

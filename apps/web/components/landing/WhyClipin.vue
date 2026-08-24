@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import { BarChart2, IndianRupee, Eye, Store } from 'lucide-vue-next'
 
-const features = [
+interface Feature {
+  icon: Component
+  title: string
+  description: string
+}
+
+const features: Feature[] = [
   {
     icon: BarChart2,
     title: 'Performance based',

@@ -1,15 +1,20 @@
 <template>
   <div class="min-h-screen bg-black text-white flex flex-col justify-center items-center px-4 relative selection:bg-white selection:text-black py-12">
-    <div class="mb-8 flex items-center gap-3">
-      <NuxtLink to="/" class="flex items-center gap-2.5 group">
-        <div class="w-7 h-7 rounded bg-white text-black font-bold flex items-center justify-center text-xs tracking-tight">
+    <!-- Subtle Radial Glow Background -->
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_65%)] pointer-events-none"></div>
+
+    <!-- Header Brand Logo -->
+    <div class="mb-6 flex items-center gap-3 relative z-10">
+      <NuxtLink to="/" class="inline-flex items-center gap-2.5 group">
+        <div class="w-7 h-7 rounded bg-white text-black font-bold flex items-center justify-center text-xs tracking-tight shadow-sm">
           CI
         </div>
         <span class="font-semibold text-base tracking-tight text-white">ClipIN</span>
       </NuxtLink>
     </div>
 
-    <div class="w-full max-w-md flex justify-center min-h-[480px]">
+    <!-- SignIn Component Container -->
+    <div class="w-full max-w-md flex justify-center min-h-[480px] relative z-10">
       <ClientOnly>
         <SignIn
           path="/sign-in"

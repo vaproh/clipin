@@ -19,9 +19,22 @@ db-down:
 db-logs:
     docker compose logs -f
 
-# Run all dev servers concurrently
+# Run frontend dev server
+dev-frontend:
+    @echo "Starting Frontend on http://localhost:3000..."
+    cd apps/web && bun run dev
+
+# Run backend dev services (PostgreSQL, Redis, Go API, Go Verifier)
+dev-backend: db-up
+    @echo "Starting Backend API on http://localhost:8080..."
+    @echo "Starting Verifier on http://localhost:8081..."
+    (cd apps/api && go run ./cmd/api) & \
+    (cd services/verifier && go run ./cmd/verifier) & \
+    wait
+
+# Run all dev servers (databases, backend services, frontend)
 dev: db-up
-    @echo "Starting dev environment..."
+    @echo "Starting full dev environment..."
     @echo "Starting API on http://localhost:8080"
     @echo "Starting Verifier on http://localhost:8081"
     @echo "Starting Frontend on http://localhost:3000"
@@ -30,15 +43,15 @@ dev: db-up
     (cd apps/web && bun run dev) & \
     wait
 
-# Run Nuxt frontend dev server
+# Shortcut for Nuxt frontend dev server
 web:
     cd apps/web && bun run dev
 
-# Run Go backend API server
+# Shortcut for Go backend API server
 api:
     cd apps/api && go run ./cmd/api
 
-# Run Go verifier service server
+# Shortcut for Go verifier service server
 verifier:
     cd services/verifier && go run ./cmd/verifier
 

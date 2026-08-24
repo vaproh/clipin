@@ -17,6 +17,7 @@ India's performance clipping marketplace.
 - TanStack Query
 - Zod
 - VueUse
+- Clerk
 
 ### Backend
 
@@ -31,7 +32,7 @@ India's performance clipping marketplace.
 
 ### External
 
-- Auth provider
+- Clerk Auth
 - Razorpay
 - Cloudflare
 - Social verification integrations
@@ -52,22 +53,30 @@ Start databases:
 just db-up
 ```
 
-Start the web app:
+Run frontend dev server:
 
 ```bash
-just web
+just dev-frontend
 ```
 
-Start the API:
+Run backend dev services (PostgreSQL, Redis, Go API, Go Verifier):
 
 ```bash
-just api
+just dev-backend
 ```
 
-Start the verifier:
+Run all dev servers:
 
 ```bash
-just verifier
+just dev
+```
+
+Run individual services:
+
+```bash
+just web        # Nuxt frontend
+just api        # Go API server
+just verifier   # Go verifier service
 ```
 
 Run checks:
@@ -76,11 +85,12 @@ Run checks:
 just test
 just lint
 just format
+just build
 ```
 
 ## Current scope
 
-This repository is initially scaffolding only. Product functionality will be implemented phase by phase according to `PRD.md`.
+Phase 1 scaffolding, public landing page (Linear design system), Clerk authentication, and minimal `/app` application shell. Product marketplace functionality will be implemented phase by phase according to `PRD.md`.
 
 ## Repository structure
 

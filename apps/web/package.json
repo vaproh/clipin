@@ -13,6 +13,7 @@
     "test": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/nuxt": "^2",
     "@tanstack/vue-query": "^5.66.0",
     "@vueuse/core": "^12.7.0",
     "@vueuse/nuxt": "^12.7.0",

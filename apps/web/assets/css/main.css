@@ -4,51 +4,83 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --canvas: #010102;
+    --surface-1: #0f1011;
+    --surface-2: #141516;
+    --surface-3: #18191a;
+    --hairline: #23252a;
+    --hairline-strong: #34343a;
+    --ink: #f7f8f8;
+    --ink-muted: #d0d6e0;
+    --ink-subtle: #8a8f98;
+    --accent: #5e6ad2;
+    --accent-hover: #828fff;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --background: 240 10% 1%;
+    --foreground: 0 0% 97%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --card: 240 6% 6%;
+    --card-foreground: 0 0% 97%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --popover: 240 6% 6%;
+    --popover-foreground: 0 0% 97%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --primary: 236 57% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --secondary: 240 5% 9%;
+    --secondary-foreground: 0 0% 97%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --muted: 240 5% 12%;
+    --muted-foreground: 240 5% 58%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 240 8% 15%;
+    --input: 240 8% 15%;
+    --ring: 236 57% 60%;
 
     --radius: 0.5rem;
   }
 }
 
-body {
-  font-family:
-    "Plus Jakarta Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  antialiased: true;
+html {
+  scroll-behavior: smooth;
 }
 
-code,
-pre,
-.font-mono {
-  font-family: "JetBrains Mono", monospace;
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--canvas);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Linear-style subtle glow & hairline utility classes */
+.hairline-border {
+  border: 1px solid var(--hairline);
+}
+
+.hairline-border-strong {
+  border: 1px solid var(--hairline-strong);
+}
+
+.linear-card {
+  background-color: var(--surface-1);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.linear-card-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.linear-card-hover:hover {
+  border-color: var(--hairline-strong);
+  background-color: var(--surface-2);
+}
+
+.linear-glow {
+  background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(94, 106, 210, 0.08), transparent 40%);
 }

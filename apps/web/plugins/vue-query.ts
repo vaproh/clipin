@@ -1,4 +1,5 @@
-import { QueryClient, VueQueryPlugin } from "@tanstack/vue-query";
+import { defineNuxtPlugin } from '#app'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const queryClient = new QueryClient({
@@ -8,7 +9,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         refetchOnWindowFocus: false,
       },
     },
-  });
+  })
 
-  nuxtApp.vueApp.use(VueQueryPlugin, { queryClient });
-});
+  nuxtApp.vueApp.use(VueQueryPlugin, { queryClient })
+})

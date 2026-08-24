@@ -2,5 +2,10 @@
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "target": "ES2022"
-  }
+  },
+  "include": [
+    "./.nuxt/nuxt.d.ts",
+    "./.nuxt/imports.d.ts",
+    "**/*"
+  ]
 }

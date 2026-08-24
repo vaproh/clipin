@@ -1,4 +1,5 @@
 import { readonly } from 'vue'
+import { useState } from '#app'
 
 export interface AuthUser {
   id: string

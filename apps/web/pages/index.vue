@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useRuntimeConfig } from "#app";
 import {
   Server,
   Database,

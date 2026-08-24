@@ -1,0 +1,5 @@
+.output
+.nuxt
+dist
+node_modules
+bun.lock

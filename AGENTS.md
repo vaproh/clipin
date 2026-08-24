@@ -1,0 +1,258 @@
+# AGENTS.md
+
+## Project
+
+ClipIN is an India-focused performance clipping marketplace.
+
+Core transaction:
+
+> Content owner → clipping campaign → clipper → published short-form post → verified views → earnings → payout
+
+## Engineering Principles
+
+### 1. Keep the architecture lean
+
+Do not introduce infrastructure because it is fashionable.
+
+Default to:
+
+- Go API
+- PostgreSQL
+- Redis
+- background workers
+- Nuxt/Vue frontend
+- external auth provider
+- Razorpay
+- Cloudflare
+
+Avoid Kubernetes, microservices, managed infrastructure, or additional queues unless there is a concrete reason.
+
+### 2. Build in phases
+
+Implement only the current product phase.
+
+Do not prematurely implement:
+
+- advanced fraud systems
+- Android
+- AI features
+- recommendations
+- influencer marketplace
+- video hosting
+- enterprise features
+
+### 3. Backend source of truth
+
+PostgreSQL is authoritative for business state.
+
+Redis is for:
+
+- caching
+- queues
+- rate limiting
+- locks
+- temporary state
+
+Never treat Redis as the source of truth for financial records.
+
+### 4. Financial correctness
+
+All money movement must be represented in an auditable ledger.
+
+Prefer:
+
+- transactions
+- idempotency keys
+- explicit state transitions
+- immutable ledger entries
+- audit logs
+
+Never implement financial logic as a loose collection of balance mutations.
+
+### 5. Verification separation
+
+The verification service only retrieves/normalizes social metrics.
+
+It must not own:
+
+- balances
+- campaign budgets
+- payout decisions
+- campaign eligibility
+
+The main backend decides what verified metrics mean financially.
+
+### 6. External authentication
+
+Do not implement password storage or custom authentication unless explicitly required.
+
+The application should verify the external auth provider's identity and map it to an internal user.
+
+### 7. API design
+
+- Keep handlers thin.
+- Put business logic in service/domain layers.
+- Validate inputs at boundaries.
+- Return predictable errors.
+- Use typed request/response models.
+- Keep API contracts documented through Huma/OpenAPI.
+- Prefer idempotent operations where retries are possible.
+
+### 8. Database
+
+Use PostgreSQL with `pgx` and `sqlc`.
+
+Prefer SQL-first design over an ORM.
+
+Use:
+
+- migrations
+- foreign keys
+- constraints
+- indexes based on real query patterns
+- transactions for multi-row state changes
+
+Do not optimize prematurely.
+
+### 9. Redis and caching
+
+Cache only data that is safe to cache.
+
+Good candidates:
+
+- public campaign lists
+- public campaign details
+- expensive read-heavy queries
+
+Avoid stale caching for:
+
+- balances
+- payout state
+- financial ledger
+- security-sensitive state
+
+Invalidate or refresh deliberately after writes.
+
+### 10. Frontend
+
+Use:
+
+- Nuxt
+- Vue 3
+- TypeScript
+- Tailwind
+- shadcn-vue
+- Motion for Vue
+- Lucide
+- TanStack Query
+- Zod
+- VueUse
+
+Keep server state in TanStack Query.
+
+Do not introduce Pinia unless the product develops a genuine global client-state requirement.
+
+### 11. Design
+
+ClipIN should feel:
+
+- precise
+- modern
+- monochrome
+- trustworthy
+- restrained
+- information-dense where appropriate
+
+Avoid:
+
+- fake counters
+- fake testimonials
+- fake campaign activity
+- fake earnings
+- excessive gradients
+- unnecessary animation
+- generic startup templates
+
+### 12. Security
+
+- Never commit secrets.
+- Use `.env.example`.
+- Validate all external input.
+- Rate-limit sensitive endpoints.
+- Use Cloudflare Turnstile where appropriate.
+- Never trust client-provided earnings/views/balances.
+- Treat all social metrics as untrusted until verified.
+- Protect webhook endpoints.
+- Make payout operations idempotent.
+- Log security-sensitive changes.
+
+### 13. Testing
+
+At minimum:
+
+- unit tests for business-critical logic
+- API tests for important workflows
+- database/integration tests where state transitions matter
+- tests for ledger arithmetic
+- tests for campaign budget calculations
+- tests for idempotency and payout state transitions
+
+### 14. Observability
+
+Prefer simple structured logs first.
+
+Important events:
+
+- authentication failures
+- campaign state changes
+- submission state changes
+- verification failures
+- ledger changes
+- payout changes
+- admin overrides
+
+Do not log passwords, tokens, payment secrets, or sensitive credentials.
+
+### 15. Documentation
+
+Update documentation when architecture or workflows change.
+
+Keep:
+
+- README
+- PRD
+- AGENTS
+- API/OpenAPI documentation
+- migration notes where necessary
+
+### 16. Git
+
+Use small, focused commits.
+
+Prefer conventional commit style if practical:
+
+- `feat:`
+- `fix:`
+- `chore:`
+- `refactor:`
+- `docs:`
+- `test:`
+
+Do not commit generated secrets, local databases, build output, or dependency caches.
+
+## Definition of Done
+
+A feature is not complete merely because the happy path works.
+
+Before marking work complete:
+
+1. Frontend builds.
+2. Backend builds.
+3. Relevant tests pass.
+4. Migrations run cleanly.
+5. API contracts are consistent.
+6. Errors are handled.
+7. Authorization is checked.
+8. Financial operations are auditable where relevant.
+9. No secrets are committed.
+10. Documentation is updated when needed.

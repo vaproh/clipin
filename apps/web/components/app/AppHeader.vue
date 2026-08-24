@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { UserButton } from '@clerk/vue'
+
 const { user } = useUser()
 </script>
 

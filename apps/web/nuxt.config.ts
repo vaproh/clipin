@@ -10,15 +10,16 @@ export default defineNuxtConfig({
   ],
 
   runtimeConfig: {
-    clerkSecretKey: process.env.NUXT_CLERK_SECRET_KEY || process.env.CLERK_SECRET_KEY,
+    clerkSecretKey: process.env.CLERK_SECRET_KEY || process.env.NUXT_CLERK_SECRET_KEY,
     public: {
-      clerkPublishableKey: process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
       verifierBase: process.env.NUXT_PUBLIC_VERIFIER_BASE || 'http://localhost:8081',
     },
   },
 
   clerk: {
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     appearance: {
       variables: {
         colorPrimary: '#ffffff',

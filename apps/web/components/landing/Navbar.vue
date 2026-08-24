@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ArrowRight } from 'lucide-vue-next'
+import { UserButton } from '@clerk/vue'
+
+const { isSignedIn } = useAuth()
 
 const isScrolled = ref(false)
 
@@ -48,7 +51,7 @@ onUnmounted(() => {
 
       <!-- User Auth Controls -->
       <div class="flex items-center gap-2.5">
-        <SignedOut>
+        <template v-if="!isSignedIn">
           <NuxtLink
             to="/sign-in"
             class="h-8 px-3 inline-flex items-center justify-center rounded text-xs font-medium text-neutral-300 hover:text-white hover:bg-neutral-900 transition-colors"
@@ -61,9 +64,9 @@ onUnmounted(() => {
           >
             Get started
           </NuxtLink>
-        </SignedOut>
+        </template>
 
-        <SignedIn>
+        <template v-else>
           <NuxtLink
             to="/app"
             class="h-8 px-3.5 inline-flex items-center justify-center rounded bg-neutral-900 text-white border border-neutral-800 text-xs font-medium hover:bg-neutral-800 transition-colors gap-1.5"
@@ -72,7 +75,7 @@ onUnmounted(() => {
             <ArrowRight class="w-3.5 h-3.5 text-neutral-400" />
           </NuxtLink>
           <UserButton after-sign-out-url="/" />
-        </SignedIn>
+        </template>
       </div>
     </div>
   </header>

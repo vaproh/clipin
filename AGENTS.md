@@ -188,6 +188,12 @@ Avoid:
 
 ### 13. Testing
 
+Always follow the TDD development workflow:
+
+1. Always write a test first.
+2. Then write the feature code to satisfy the test.
+3. Then test, fix, and complete.
+
 At minimum:
 
 - unit tests for business-critical logic

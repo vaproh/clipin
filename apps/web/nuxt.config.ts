@@ -14,15 +14,16 @@ export default defineNuxtConfig({
   ],
 
   runtimeConfig: {
-    clerkSecretKey: process.env.CLERK_SECRET_KEY || process.env.NUXT_CLERK_SECRET_KEY,
+    clerkSecretKey: process.env.CLERK_SECRET_KEY || process.env.NUXT_CLERK_SECRET_KEY || 'sk_test_itnjoan2YJ9vAB0qqkBZrFSbizhGSFN5zfNKX3mqpr',
     public: {
-      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_cGlja2VkLWdhcmZpc2gtMTc0NS5jbGVyay5hY2NvdW50cy5kZXYk',
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
       verifierBase: process.env.NUXT_PUBLIC_VERIFIER_BASE || 'http://localhost:8081',
     },
   },
 
   clerk: {
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_cGlja2VkLWdhcmZpc2gtMTc0NS5jbGVyay5hY2NvdW50cy5kZXYk',
     appearance: {
       variables: {
         colorPrimary: '#ffffff',

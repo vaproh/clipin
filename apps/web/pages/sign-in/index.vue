@@ -1,7 +1,3 @@
-<script setup lang="ts">
-import { SignIn } from '@clerk/vue'
-</script>
-
 <template>
   <div class="min-h-screen bg-black text-white flex flex-col justify-center items-center px-4 relative selection:bg-white selection:text-black py-12">
     <div class="mb-8 flex items-center gap-3">

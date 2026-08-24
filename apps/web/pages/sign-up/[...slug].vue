@@ -1,3 +1,9 @@
+<script setup lang="ts">
+definePageMeta({
+  layout: false,
+})
+</script>
+
 <template>
   <div class="min-h-screen bg-black text-white flex flex-col justify-center items-center px-4 relative selection:bg-white selection:text-black py-12">
     <!-- Subtle Radial Glow Background -->

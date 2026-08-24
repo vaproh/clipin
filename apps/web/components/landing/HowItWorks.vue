@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
+import { Motion } from 'motion-v'
 import { Search, Scissors, ShieldCheck, Wallet } from 'lucide-vue-next'
 
 interface Step {
@@ -51,11 +52,14 @@ const steps: Step[] = [
         </p>
       </div>
 
-      <!-- 4-Step Cards Grid -->
+      <!-- 4-Step Cards Grid with Motion -->
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          v-for="step in steps"
+        <Motion
+          v-for="(step, idx) in steps"
           :key="step.number"
+          :initial="{ opacity: 0, y: 20 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :transition="{ duration: 0.4, delay: idx * 0.08 }"
           class="rounded-xl bg-[#0f1011] border border-[#23252a] p-6 space-y-4 hover:border-[#34343a] transition-all relative group"
         >
           <div class="flex items-center justify-between">
@@ -71,7 +75,7 @@ const steps: Step[] = [
               {{ step.description }}
             </p>
           </div>
-        </div>
+        </Motion>
       </div>
     </div>
   </section>

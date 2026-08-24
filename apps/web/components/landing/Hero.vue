@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Motion } from 'motion-v'
 import { ArrowRight, Play, TrendingUp, Sparkles, Video, Instagram, Youtube } from 'lucide-vue-next'
 
 const mockCampaigns = [
@@ -32,8 +33,13 @@ const mockCampaigns = [
     <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(94,106,210,0.07)_0%,transparent_70%)] pointer-events-none"></div>
 
     <div class="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 space-y-12">
-      <!-- Eyebrow & Hero Copy -->
-      <div class="max-w-3xl space-y-6">
+      <!-- Eyebrow & Hero Copy with Motion -->
+      <Motion
+        :initial="{ opacity: 0, y: 20 }"
+        :animate="{ opacity: 1, y: 0 }"
+        :transition="{ duration: 0.5, ease: 'easeOut' }"
+        class="max-w-3xl space-y-6"
+      >
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0f1011] border border-[#23252a] text-xs font-mono text-[#8a8f98]">
           <span class="w-1.5 h-1.5 rounded-full bg-[#5e6ad2] animate-pulse"></span>
           Performance Clipping Marketplace for India
@@ -64,10 +70,16 @@ const mockCampaigns = [
             I'm a campaign owner
           </a>
         </div>
-      </div>
+      </Motion>
 
-      <!-- Marketplace UI Preview Window -->
-      <div id="campaigns" class="space-y-3 pt-6">
+      <!-- Marketplace UI Preview Window with Motion -->
+      <Motion
+        :initial="{ opacity: 0, y: 30 }"
+        :animate="{ opacity: 1, y: 0 }"
+        :transition="{ duration: 0.6, delay: 0.1, ease: 'easeOut' }"
+        id="campaigns"
+        class="space-y-3 pt-6"
+      >
         <div class="flex items-center justify-between px-1">
           <div class="flex items-center gap-2">
             <span class="text-xs font-mono uppercase tracking-wider text-[#8a8f98]">Marketplace preview</span>
@@ -114,7 +126,7 @@ const mockCampaigns = [
             </div>
           </div>
         </div>
-      </div>
+      </Motion>
     </div>
   </section>
 </template>

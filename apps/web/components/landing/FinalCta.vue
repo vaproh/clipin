@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Motion } from 'motion-v'
 import { ArrowRight } from 'lucide-vue-next'
 </script>
 
@@ -6,7 +7,12 @@ import { ArrowRight } from 'lucide-vue-next'
   <section class="py-20 border-t border-[#23252a]/60 relative overflow-hidden">
     <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(94,106,210,0.08)_0%,transparent_70%)] pointer-events-none"></div>
 
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6 relative z-10">
+    <Motion
+      :initial="{ opacity: 0, scale: 0.96 }"
+      :animate="{ opacity: 1, scale: 1 }"
+      :transition="{ duration: 0.5 }"
+      class="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6 relative z-10"
+    >
       <h2 class="text-3xl sm:text-5xl font-semibold tracking-tight text-[#f7f8f8]">
         Ready to clip?
       </h2>
@@ -31,6 +37,6 @@ import { ArrowRight } from 'lucide-vue-next'
           I'm a campaign owner
         </NuxtLink>
       </div>
-    </div>
+    </Motion>
   </section>
 </template>

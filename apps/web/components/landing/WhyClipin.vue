@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
+import { Motion } from 'motion-v'
 import { BarChart2, IndianRupee, Eye, Store } from 'lucide-vue-next'
 
 interface Feature {
@@ -46,9 +47,12 @@ const features: Feature[] = [
       </div>
 
       <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
+        <Motion
           v-for="(feature, idx) in features"
           :key="idx"
+          :initial="{ opacity: 0, y: 20 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :transition="{ duration: 0.4, delay: idx * 0.08 }"
           class="rounded-xl bg-[#0f1011] border border-[#23252a] p-6 space-y-4 hover:border-[#34343a] transition-all"
         >
           <div class="w-10 h-10 rounded-lg bg-[#141516] border border-[#23252a] flex items-center justify-center text-[#5e6ad2]">
@@ -61,7 +65,7 @@ const features: Feature[] = [
               {{ feature.description }}
             </p>
           </div>
-        </div>
+        </Motion>
       </div>
     </div>
   </section>

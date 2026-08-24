@@ -15,7 +15,7 @@ definePageMeta({
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#010102] text-[#f7f8f8] font-sans selection:bg-[#5e6ad2]/30 selection:text-white">
+  <div class="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black">
     <Navbar />
     <main>
       <Hero />

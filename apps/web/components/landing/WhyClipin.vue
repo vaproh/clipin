@@ -34,34 +34,34 @@ const features: Feature[] = [
 </script>
 
 <template>
-  <section class="py-20 border-t border-[#23252a]/60">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
-      <div class="space-y-3">
-        <div class="text-xs font-mono uppercase tracking-wider text-[#5e6ad2]">Value Propositions</div>
-        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-[#f7f8f8]">
+  <section id="why-clipin" class="py-16 border-t border-neutral-900 bg-black text-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
+      <div class="space-y-2">
+        <div class="text-xs font-mono uppercase tracking-wider text-neutral-400">Value Propositions</div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight text-white">
           Why ClipIN
         </h2>
-        <p class="text-sm text-[#8a8f98] max-w-xl">
+        <p class="text-xs text-neutral-400 max-w-xl">
           Engineered for transparency, performance correctness, and scale across India.
         </p>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Motion
           v-for="(feature, idx) in features"
           :key="idx"
-          :initial="{ opacity: 0, y: 20 }"
+          :initial="{ opacity: 0, y: 16 }"
           :animate="{ opacity: 1, y: 0 }"
-          :transition="{ duration: 0.4, delay: idx * 0.08 }"
-          class="rounded-xl bg-[#0f1011] border border-[#23252a] p-6 space-y-4 hover:border-[#34343a] transition-all"
+          :transition="{ duration: 0.35, delay: idx * 0.06 }"
+          class="rounded bg-neutral-950 border border-neutral-800 p-5 space-y-3.5 hover:border-neutral-700 transition-colors"
         >
-          <div class="w-10 h-10 rounded-lg bg-[#141516] border border-[#23252a] flex items-center justify-center text-[#5e6ad2]">
-            <component :is="feature.icon" class="w-5 h-5 text-[#828fff]" />
+          <div class="w-8 h-8 rounded bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+            <component :is="feature.icon" class="w-4 h-4 text-neutral-300" />
           </div>
 
-          <div class="space-y-2">
-            <h3 class="font-semibold text-base text-[#f7f8f8]">{{ feature.title }}</h3>
-            <p class="text-xs text-[#8a8f98] leading-relaxed font-normal">
+          <div class="space-y-1.5">
+            <h3 class="font-medium text-xs text-white">{{ feature.title }}</h3>
+            <p class="text-xs text-neutral-400 leading-relaxed font-normal">
               {{ feature.description }}
             </p>
           </div>

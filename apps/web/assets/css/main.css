@@ -4,41 +4,41 @@
 
 @layer base {
   :root {
-    --canvas: #010102;
-    --surface-1: #0f1011;
-    --surface-2: #141516;
-    --surface-3: #18191a;
-    --hairline: #23252a;
-    --hairline-strong: #34343a;
-    --ink: #f7f8f8;
-    --ink-muted: #d0d6e0;
-    --ink-subtle: #8a8f98;
-    --accent: #5e6ad2;
-    --accent-hover: #828fff;
+    --canvas: #000000;
+    --surface-1: #0a0a0a;
+    --surface-2: #121212;
+    --surface-3: #1a1a1a;
+    --hairline: #262626;
+    --hairline-strong: #333333;
+    --ink: #ffffff;
+    --ink-muted: #d4d4d4;
+    --ink-subtle: #a3a3a3;
+    --accent: #ffffff;
+    --accent-hover: #e5e5e5;
 
-    --background: 240 10% 1%;
-    --foreground: 0 0% 97%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
 
-    --card: 240 6% 6%;
-    --card-foreground: 0 0% 97%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 240 6% 6%;
-    --popover-foreground: 0 0% 97%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 236 57% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 240 5% 9%;
-    --secondary-foreground: 0 0% 97%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 5% 12%;
-    --muted-foreground: 240 5% 58%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 64%;
 
-    --border: 240 8% 15%;
-    --input: 240 8% 15%;
-    --ring: 236 57% 60%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
   }
 }
 
@@ -57,7 +57,7 @@ code, pre, .font-mono {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Linear-style subtle glow & hairline utility classes */
+/* Linear-style monochrome utility classes */
 .hairline-border {
   border: 1px solid var(--hairline);
 }
@@ -69,18 +69,13 @@ code, pre, .font-mono {
 .linear-card {
   background-color: var(--surface-1);
   border: 1px solid var(--hairline);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
 }
 
 .linear-card-hover {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s ease;
 }
 
 .linear-card-hover:hover {
   border-color: var(--hairline-strong);
   background-color: var(--surface-2);
-}
-
-.linear-glow {
-  background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(94, 106, 210, 0.08), transparent 40%);
 }

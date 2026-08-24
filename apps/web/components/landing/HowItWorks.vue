@@ -39,39 +39,39 @@ const steps: Step[] = [
 </script>
 
 <template>
-  <section id="how-it-works" class="py-20 border-t border-[#23252a]/60">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
+  <section id="how-it-works" class="py-16 border-t border-neutral-900 bg-black text-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-10">
       <!-- Section Header -->
-      <div class="space-y-3">
-        <div class="text-xs font-mono uppercase tracking-wider text-[#5e6ad2]">Workflow</div>
-        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-[#f7f8f8]">
+      <div class="space-y-2">
+        <div class="text-xs font-mono uppercase tracking-wider text-neutral-400">Workflow</div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight text-white">
           How ClipIN Works
         </h2>
-        <p class="text-sm text-[#8a8f98] max-w-xl">
+        <p class="text-xs text-neutral-400 max-w-xl">
           A streamlined 4-step workflow designed for clippers and content creators across India.
         </p>
       </div>
 
-      <!-- 4-Step Cards Grid with Motion -->
-      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- 4-Step Cards Grid -->
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Motion
           v-for="(step, idx) in steps"
           :key="step.number"
-          :initial="{ opacity: 0, y: 20 }"
+          :initial="{ opacity: 0, y: 16 }"
           :animate="{ opacity: 1, y: 0 }"
-          :transition="{ duration: 0.4, delay: idx * 0.08 }"
-          class="rounded-xl bg-[#0f1011] border border-[#23252a] p-6 space-y-4 hover:border-[#34343a] transition-all relative group"
+          :transition="{ duration: 0.35, delay: idx * 0.06 }"
+          class="rounded bg-neutral-950 border border-neutral-800 p-5 space-y-4 hover:border-neutral-700 transition-colors"
         >
           <div class="flex items-center justify-between">
-            <div class="w-10 h-10 rounded-lg bg-[#141516] border border-[#23252a] flex items-center justify-center text-[#f7f8f8] group-hover:border-[#5e6ad2]/50 transition-colors">
-              <component :is="step.icon" class="w-5 h-5 text-[#828fff]" />
+            <div class="w-8 h-8 rounded bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+              <component :is="step.icon" class="w-4 h-4 text-neutral-300" />
             </div>
-            <span class="font-mono text-xs font-semibold text-[#62666d]">{{ step.number }}</span>
+            <span class="font-mono text-xs font-semibold text-neutral-500">{{ step.number }}</span>
           </div>
 
-          <div class="space-y-2">
-            <h3 class="font-semibold text-base text-[#f7f8f8]">{{ step.title }}</h3>
-            <p class="text-xs text-[#8a8f98] leading-relaxed font-normal">
+          <div class="space-y-1.5">
+            <h3 class="font-medium text-xs text-white">{{ step.title }}</h3>
+            <p class="text-xs text-neutral-400 leading-relaxed font-normal">
               {{ step.description }}
             </p>
           </div>

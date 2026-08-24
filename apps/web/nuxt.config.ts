@@ -21,12 +21,12 @@ export default defineNuxtConfig({
   clerk: {
     appearance: {
       variables: {
-        colorPrimary: '#5e6ad2',
-        colorBackground: '#0f1011',
-        colorInputBackground: '#141516',
-        colorInputText: '#f7f8f8',
-        colorText: '#f7f8f8',
-        colorTextSecondary: '#8a8f98',
+        colorPrimary: '#ffffff',
+        colorBackground: '#0a0a0a',
+        colorInputBackground: '#121212',
+        colorInputText: '#ffffff',
+        colorText: '#ffffff',
+        colorTextSecondary: '#a3a3a3',
       },
     },
   },

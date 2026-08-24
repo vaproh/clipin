@@ -23,35 +23,35 @@ const navItems: NavItem[] = [
 </script>
 
 <template>
-  <aside class="w-64 bg-[#0f1011] border-r border-[#23252a] flex flex-col justify-between p-4 h-screen sticky top-0 font-sans">
-    <div class="space-y-6">
+  <aside class="w-60 bg-black border-r border-neutral-900 flex flex-col justify-between p-3.5 h-screen sticky top-0 font-sans">
+    <div class="space-y-5">
       <!-- App Brand Logo -->
       <NuxtLink to="/" class="flex items-center gap-2.5 px-2">
-        <div class="w-7 h-7 rounded-md bg-[#5e6ad2] text-white font-semibold flex items-center justify-center text-xs tracking-tight shadow-sm">
+        <div class="w-6 h-6 rounded bg-white text-black font-bold flex items-center justify-center text-[10px] tracking-tight">
           CI
         </div>
-        <span class="font-semibold text-base tracking-tight text-[#f7f8f8]">ClipIN App</span>
+        <span class="font-semibold text-sm tracking-tight text-white">ClipIN App</span>
       </NuxtLink>
 
       <!-- Nav Items -->
-      <nav class="space-y-1 text-xs font-medium">
+      <nav class="space-y-0.5 text-xs font-medium">
         <NuxtLink
           v-for="item in navItems"
           :key="item.path"
           :to="item.path"
-          class="flex items-center justify-between px-3 py-2 rounded-md transition-colors"
+          class="flex items-center justify-between px-2.5 py-2 rounded transition-colors"
           :class="[
             route.path === item.path
-              ? 'bg-[#141516] text-[#f7f8f8] border border-[#23252a] font-semibold'
-              : 'text-[#8a8f98] hover:text-[#f7f8f8] hover:bg-[#141516]/50'
+              ? 'bg-neutral-900 text-white border border-neutral-800'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-950'
           ]"
         >
           <div class="flex items-center gap-2.5">
-            <component :is="item.icon" class="w-4 h-4 text-[#8a8f98]" :class="{ 'text-[#5e6ad2]': route.path === item.path }" />
+            <component :is="item.icon" class="w-4 h-4 text-neutral-400" :class="{ 'text-white': route.path === item.path }" />
             <span>{{ item.name }}</span>
           </div>
 
-          <span v-if="item.badge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#18191a] text-[#62666d] border border-[#23252a]">
+          <span v-if="item.badge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neutral-950 text-neutral-500 border border-neutral-900">
             {{ item.badge }}
           </span>
         </NuxtLink>
@@ -59,12 +59,12 @@ const navItems: NavItem[] = [
     </div>
 
     <!-- Status Footer Card -->
-    <div class="p-3 rounded-lg bg-[#141516] border border-[#23252a] text-[11px] font-mono text-[#8a8f98] space-y-1">
-      <div class="flex items-center gap-1.5 text-[#f7f8f8]">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+    <div class="p-3 rounded bg-neutral-950 border border-neutral-900 text-[11px] font-mono text-neutral-400 space-y-1">
+      <div class="flex items-center gap-1.5 text-white">
+        <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
         Platform Early Access
       </div>
-      <div class="text-[#62666d] text-[10px]">Marketplace Pre-Launch</div>
+      <div class="text-neutral-500 text-[10px]">Marketplace Pre-Launch</div>
     </div>
   </aside>
 </template>

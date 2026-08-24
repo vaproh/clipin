@@ -33,35 +33,35 @@ const toggle = (idx: number) => {
 </script>
 
 <template>
-  <section class="py-20 border-t border-[#23252a]/60">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 space-y-10">
-      <div class="space-y-3 text-center">
-        <div class="text-xs font-mono uppercase tracking-wider text-[#5e6ad2]">FAQ</div>
-        <h2 class="text-2xl sm:text-3xl font-semibold tracking-tight text-[#f7f8f8]">
+  <section class="py-16 border-t border-neutral-900 bg-black text-white">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 space-y-8">
+      <div class="space-y-2 text-center">
+        <div class="text-xs font-mono uppercase tracking-wider text-neutral-400">FAQ</div>
+        <h2 class="text-xl sm:text-2xl font-semibold tracking-tight text-white">
           Frequently Asked Questions
         </h2>
       </div>
 
-      <div class="space-y-3">
+      <div class="space-y-2.5">
         <div
           v-for="(faq, idx) in faqs"
           :key="idx"
-          class="rounded-xl bg-[#0f1011] border border-[#23252a] overflow-hidden transition-colors"
+          class="rounded bg-neutral-950 border border-neutral-800 overflow-hidden transition-colors"
         >
           <button
             @click="toggle(idx)"
-            class="w-full p-5 text-left flex items-center justify-between font-medium text-sm text-[#f7f8f8] hover:text-white transition-colors"
+            class="w-full p-4 text-left flex items-center justify-between font-medium text-xs text-white hover:text-neutral-200 transition-colors"
           >
             <span>{{ faq.question }}</span>
             <ChevronDown
-              class="w-4 h-4 text-[#8a8f98] transition-transform duration-200"
-              :class="{ 'rotate-180 text-[#5e6ad2]': openIdx === idx }"
+              class="w-4 h-4 text-neutral-400 transition-transform duration-200"
+              :class="{ 'rotate-180 text-white': openIdx === idx }"
             />
           </button>
 
           <div
             v-if="openIdx === idx"
-            class="px-5 pb-5 text-xs text-[#8a8f98] leading-relaxed font-normal border-t border-[#23252a]/40 pt-3"
+            class="px-4 pb-4 text-xs text-neutral-400 leading-relaxed font-normal border-t border-neutral-900 pt-3"
           >
             {{ faq.answer }}
           </div>

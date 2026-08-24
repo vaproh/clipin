@@ -12,28 +12,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        canvas: '#010102',
+        canvas: '#000000',
         surface: {
-          1: '#0f1011',
-          2: '#141516',
-          3: '#18191a',
-          4: '#191a1b',
+          1: '#0a0a0a',
+          2: '#121212',
+          3: '#1a1a1a',
+          4: '#262626',
         },
         hairline: {
-          DEFAULT: '#23252a',
-          strong: '#34343a',
-          tertiary: '#3e3e44',
+          DEFAULT: '#262626',
+          strong: '#333333',
+          tertiary: '#404040',
         },
         ink: {
-          DEFAULT: '#f7f8f8',
-          muted: '#d0d6e0',
-          subtle: '#8a8f98',
-          tertiary: '#62666d',
+          DEFAULT: '#ffffff',
+          muted: '#d4d4d4',
+          subtle: '#a3a3a3',
+          tertiary: '#737373',
         },
         brand: {
-          DEFAULT: '#5e6ad2',
-          hover: '#828fff',
-          focus: '#5e69d1',
+          DEFAULT: '#ffffff',
+          hover: '#e5e5e5',
+          focus: '#ffffff',
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

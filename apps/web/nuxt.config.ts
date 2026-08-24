@@ -23,7 +23,6 @@ export default defineNuxtConfig({
   },
 
   clerk: {
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     appearance: {
       variables: {
         colorPrimary: '#ffffff',

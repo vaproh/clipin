@@ -10,6 +10,7 @@ yarn.lock
 .output/
 .nuxt/
 .nitro/
+.clerk/
 dist/
 bin/
 *.exe

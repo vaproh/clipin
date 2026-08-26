@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -26,6 +27,21 @@ func (c *Client) Ping(ctx context.Context) error {
 		return fmt.Errorf("redis client is not initialized")
 	}
 	return c.rdb.Ping(ctx).Err()
+}
+
+func (c *Client) Get(ctx context.Context, key string) ([]byte, error) {
+	if c.rdb == nil {
+		return nil, fmt.Errorf("redis client is not initialized")
+	}
+	val, err := c.rdb.Get(ctx, key).Bytes()
+	return val, err
+}
+
+func (c *Client) Set(ctx context.Context, key string, val []byte, ttl time.Duration) error {
+	if c.rdb == nil {
+		return fmt.Errorf("redis client is not initialized")
+	}
+	return c.rdb.Set(ctx, key, val, ttl).Err()
 }
 
 func (c *Client) Close() error {

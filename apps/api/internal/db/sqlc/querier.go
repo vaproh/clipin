@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CountCampaignsFiltered(ctx context.Context, arg CountCampaignsFilteredParams) (int64, error)
 	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
 	CreateSocialAccount(ctx context.Context, arg CreateSocialAccountParams) (SocialAccount, error)
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (Submission, error)
@@ -21,6 +22,8 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
 	ListActiveCampaigns(ctx context.Context) ([]Campaign, error)
+	ListCampaignsByOwner(ctx context.Context, ownerID string) ([]Campaign, error)
+	ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFilteredParams) ([]Campaign, error)
 	ListSocialAccountsByUserID(ctx context.Context, userID string) ([]SocialAccount, error)
 	ListSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) ([]Submission, error)
 	ListSubmissionsByClipper(ctx context.Context, clipperID string) ([]Submission, error)

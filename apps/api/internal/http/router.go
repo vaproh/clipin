@@ -11,6 +11,7 @@ import (
 	"clipin/apps/api/internal/db"
 	"clipin/apps/api/internal/http/handlers"
 	"clipin/apps/api/internal/redis"
+	"clipin/apps/api/internal/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -78,6 +79,14 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	// Handlers (public: /health, /openapi.json, /docs stay on the root router)
 	handlers.RegisterHealthHandler(api, deps, deps.Config.Env)
+
+	// Campaign marketplace service (public endpoints)
+	var campaignSvc *service.CampaignService
+	if deps.DB != nil {
+		campaignCache := service.NewCampaignCache(deps.Redis)
+		campaignSvc = service.NewCampaignService(deps.DB.Queries, campaignCache)
+	}
+	handlers.RegisterCampaignHandlers(api, campaignSvc)
 
 	// Authenticated routes live in this group, behind Clerk JWT verification
 	// and session loading. The middleware no-ops when CLERK_JWKS_URL is unset

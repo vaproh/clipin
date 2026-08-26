@@ -45,6 +45,29 @@ WHERE status IN ('active', 'funded')
   AND (ends_at IS NULL OR ends_at > NOW())
 ORDER BY created_at DESC;
 
+-- name: ListCampaignsFiltered :many
+SELECT * FROM campaigns
+WHERE status IN ('active', 'funded')
+  AND (ends_at IS NULL OR ends_at > NOW())
+  AND ($1::text = '' OR platform = $1)
+  AND ($2::int = 0 OR cpm_rate <= $2)
+  AND ($3::int = 0 OR remaining_budget >= $3)
+ORDER BY created_at DESC
+LIMIT $4 OFFSET $5;
+
+-- name: CountCampaignsFiltered :one
+SELECT COUNT(*) FROM campaigns
+WHERE status IN ('active', 'funded')
+  AND (ends_at IS NULL OR ends_at > NOW())
+  AND ($1::text = '' OR platform = $1)
+  AND ($2::int = 0 OR cpm_rate <= $2)
+  AND ($3::int = 0 OR remaining_budget >= $3);
+
+-- name: ListCampaignsByOwner :many
+SELECT * FROM campaigns
+WHERE owner_id = $1
+ORDER BY created_at DESC;
+
 -- name: CreateCampaign :one
 INSERT INTO campaigns (
     id, owner_id, title, description, brief_url, platform, status,

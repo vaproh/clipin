@@ -11,6 +11,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCampaignsFiltered = `-- name: CountCampaignsFiltered :one
+SELECT COUNT(*) FROM campaigns
+WHERE status IN ('active', 'funded')
+  AND (ends_at IS NULL OR ends_at > NOW())
+  AND ($1::text = '' OR platform = $1)
+  AND ($2::int = 0 OR cpm_rate <= $2)
+  AND ($3::int = 0 OR remaining_budget >= $3)
+`
+
+type CountCampaignsFilteredParams struct {
+	Column1 string `json:"column_1"`
+	Column2 int32  `json:"column_2"`
+	Column3 int32  `json:"column_3"`
+}
+
+func (q *Queries) CountCampaignsFiltered(ctx context.Context, arg CountCampaignsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCampaignsFiltered, arg.Column1, arg.Column2, arg.Column3)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCampaign = `-- name: CreateCampaign :one
 INSERT INTO campaigns (
     id, owner_id, title, description, brief_url, platform, status,
@@ -325,6 +347,119 @@ ORDER BY created_at DESC
 
 func (q *Queries) ListActiveCampaigns(ctx context.Context) ([]Campaign, error) {
 	rows, err := q.db.Query(ctx, listActiveCampaigns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Campaign
+	for rows.Next() {
+		var i Campaign
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Description,
+			&i.BriefUrl,
+			&i.Platform,
+			&i.Status,
+			&i.CpmRate,
+			&i.TotalBudget,
+			&i.RemainingBudget,
+			&i.PlatformFee,
+			&i.EscrowID,
+			&i.MaxClipsPerCampaign,
+			&i.MaxClipsPerClipper,
+			&i.MinViewsPerClip,
+			&i.AutoApproveHours,
+			&i.StartsAt,
+			&i.EndsAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCampaignsByOwner = `-- name: ListCampaignsByOwner :many
+SELECT id, owner_id, title, description, brief_url, platform, status, cpm_rate, total_budget, remaining_budget, platform_fee, escrow_id, max_clips_per_campaign, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, starts_at, ends_at, created_at, updated_at FROM campaigns
+WHERE owner_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListCampaignsByOwner(ctx context.Context, ownerID string) ([]Campaign, error) {
+	rows, err := q.db.Query(ctx, listCampaignsByOwner, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Campaign
+	for rows.Next() {
+		var i Campaign
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerID,
+			&i.Title,
+			&i.Description,
+			&i.BriefUrl,
+			&i.Platform,
+			&i.Status,
+			&i.CpmRate,
+			&i.TotalBudget,
+			&i.RemainingBudget,
+			&i.PlatformFee,
+			&i.EscrowID,
+			&i.MaxClipsPerCampaign,
+			&i.MaxClipsPerClipper,
+			&i.MinViewsPerClip,
+			&i.AutoApproveHours,
+			&i.StartsAt,
+			&i.EndsAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCampaignsFiltered = `-- name: ListCampaignsFiltered :many
+SELECT id, owner_id, title, description, brief_url, platform, status, cpm_rate, total_budget, remaining_budget, platform_fee, escrow_id, max_clips_per_campaign, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, starts_at, ends_at, created_at, updated_at FROM campaigns
+WHERE status IN ('active', 'funded')
+  AND (ends_at IS NULL OR ends_at > NOW())
+  AND ($1::text = '' OR platform = $1)
+  AND ($2::int = 0 OR cpm_rate <= $2)
+  AND ($3::int = 0 OR remaining_budget >= $3)
+ORDER BY created_at DESC
+LIMIT $4 OFFSET $5
+`
+
+type ListCampaignsFilteredParams struct {
+	Column1 string `json:"column_1"`
+	Column2 int32  `json:"column_2"`
+	Column3 int32  `json:"column_3"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFilteredParams) ([]Campaign, error) {
+	rows, err := q.db.Query(ctx, listCampaignsFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

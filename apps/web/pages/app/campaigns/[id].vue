@@ -30,6 +30,13 @@ const progress = computed(() => {
   return ((total_budget - remaining_budget) / total_budget) * 100
 })
 
+// Owner mutations
+const { mutate: pauseCampaign, isPending: pausing } = usePauseCampaign(id)
+const { mutate: resumeCampaign, isPending: resuming } = useResumeCampaign(id)
+const { mutate: cancelCampaign, isPending: cancelling } = useCancelCampaign(id)
+
+const actionLoading = computed(() => pausing.value || resuming.value || cancelling.value)
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('en-IN', {
@@ -165,11 +172,40 @@ function relativeDate(dateStr: string | null): string {
           Submit a clip
         </UiButton>
         <template v-if="isOwner">
-          <UiButton variant="outline" size="sm">
-            Edit
-          </UiButton>
-          <UiButton variant="ghost" size="sm" class="text-neutral-400">
+          <NuxtLink v-if="campaign.status === 'draft' || campaign.status === 'paused'" :to="`/app/campaigns/${campaign.id}/edit`">
+            <UiButton variant="outline" size="sm">
+              Edit
+            </UiButton>
+          </NuxtLink>
+          <UiButton
+            v-if="campaign.status === 'active'"
+            variant="ghost"
+            size="sm"
+            class="text-neutral-400"
+            :disabled="actionLoading"
+            @click="pauseCampaign()"
+          >
             Pause
+          </UiButton>
+          <UiButton
+            v-if="campaign.status === 'paused'"
+            variant="ghost"
+            size="sm"
+            class="text-neutral-400"
+            :disabled="actionLoading"
+            @click="resumeCampaign()"
+          >
+            Resume
+          </UiButton>
+          <UiButton
+            v-if="campaign.status === 'active' || campaign.status === 'paused' || campaign.status === 'funded'"
+            variant="ghost"
+            size="sm"
+            class="text-red-400 hover:text-red-300"
+            :disabled="actionLoading"
+            @click="cancelCampaign()"
+          >
+            Cancel
           </UiButton>
         </template>
       </div>

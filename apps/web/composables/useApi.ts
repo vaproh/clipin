@@ -141,3 +141,97 @@ export function useMyCampaigns() {
     queryFn: () => fetchApi<CampaignListResponse>('/campaigns/mine'),
   })
 }
+
+/** Owner stats from GET /me/campaigns/stats. */
+export interface OwnerStats {
+  total_campaigns: number
+  active_campaigns: number
+  total_budget: number
+  total_remaining: number
+}
+
+export function useOwnerStats() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['campaigns', 'stats'],
+    queryFn: () => fetchApi<OwnerStats>('/me/campaigns/stats'),
+  })
+}
+
+/** Body fields for creating/updating a campaign. */
+export interface CreateCampaignBody {
+  title: string
+  description?: string
+  brief_url?: string
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'multi'
+  cpm_rate: number
+  total_budget: number
+  max_clips_per_campaign?: number
+  max_clips_per_clipper?: number
+  min_views_per_clip?: number
+  auto_approve_hours?: number
+  starts_at?: string
+  ends_at?: string
+}
+
+export function useCreateCampaign() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (body: CreateCampaignBody) =>
+      fetchApi<Campaign>('/campaigns', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+    },
+  })
+}
+
+export function useUpdateCampaign(id: Ref<string>) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (body: Partial<CreateCampaignBody>) =>
+      fetchApi<Campaign>(`/campaigns/${id.value}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] })
+    },
+  })
+}
+
+function useCampaignAction(id: Ref<string>, action: string) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi<Campaign>(`/campaigns/${id.value}/${action}`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['campaign', id] })
+    },
+  })
+}
+
+export function usePauseCampaign(id: Ref<string>) {
+  return useCampaignAction(id, 'pause')
+}
+
+export function useResumeCampaign(id: Ref<string>) {
+  return useCampaignAction(id, 'resume')
+}
+
+export function useCancelCampaign(id: Ref<string>) {
+  return useCampaignAction(id, 'cancel')
+}

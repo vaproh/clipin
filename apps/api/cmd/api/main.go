@@ -15,6 +15,8 @@ import (
 	"clipin/apps/api/internal/db"
 	apphttp "clipin/apps/api/internal/http"
 	"clipin/apps/api/internal/redis"
+	"clipin/apps/api/internal/service"
+	"clipin/apps/api/internal/worker"
 )
 
 func main() {
@@ -46,6 +48,12 @@ func main() {
 	} else {
 		defer database.Close()
 		log.Println("PostgreSQL connection pool initialized")
+
+		// Start auto-approve worker with graceful shutdown.
+		workerCtx, workerCancel := context.WithCancel(context.Background())
+		defer workerCancel()
+		submissionSvc := service.NewSubmissionService(database.Queries)
+		worker.StartAutoApproveWorker(workerCtx, submissionSvc, 5*time.Minute)
 	}
 
 	// Scaffolding Redis connection

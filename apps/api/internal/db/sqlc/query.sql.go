@@ -33,6 +33,33 @@ func (q *Queries) CountCampaignsFiltered(ctx context.Context, arg CountCampaigns
 	return count, err
 }
 
+const countSubmissionsByCampaign = `-- name: CountSubmissionsByCampaign :one
+SELECT COUNT(*) FROM submissions WHERE campaign_id = $1
+`
+
+func (q *Queries) CountSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSubmissionsByCampaign, campaignID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countSubmissionsByClipperForCampaign = `-- name: CountSubmissionsByClipperForCampaign :one
+SELECT COUNT(*) FROM submissions WHERE campaign_id = $1 AND clipper_id = $2
+`
+
+type CountSubmissionsByClipperForCampaignParams struct {
+	CampaignID pgtype.UUID `json:"campaign_id"`
+	ClipperID  string      `json:"clipper_id"`
+}
+
+func (q *Queries) CountSubmissionsByClipperForCampaign(ctx context.Context, arg CountSubmissionsByClipperForCampaignParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSubmissionsByClipperForCampaign, arg.CampaignID, arg.ClipperID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCampaign = `-- name: CreateCampaign :one
 INSERT INTO campaigns (
     id, owner_id, title, description, brief_url, platform, status,
@@ -488,6 +515,67 @@ func (q *Queries) ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFi
 			&i.EndsAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingSubmissionsOlderThan = `-- name: ListPendingSubmissionsOlderThan :many
+SELECT s.id, s.campaign_id, s.clipper_id, s.post_url, s.platform, s.platform_post_id, s.status, s.rejection_reason, s.approved_at, s.auto_approved_at, s.created_at, s.updated_at, c.auto_approve_hours, c.owner_id
+FROM submissions s
+JOIN campaigns c ON c.id = s.campaign_id
+WHERE s.status = 'pending'
+  AND s.created_at < $1
+ORDER BY s.created_at ASC
+`
+
+type ListPendingSubmissionsOlderThanRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	CampaignID       pgtype.UUID        `json:"campaign_id"`
+	ClipperID        string             `json:"clipper_id"`
+	PostUrl          string             `json:"post_url"`
+	Platform         string             `json:"platform"`
+	PlatformPostID   pgtype.Text        `json:"platform_post_id"`
+	Status           string             `json:"status"`
+	RejectionReason  pgtype.Text        `json:"rejection_reason"`
+	ApprovedAt       pgtype.Timestamptz `json:"approved_at"`
+	AutoApprovedAt   pgtype.Timestamptz `json:"auto_approved_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	AutoApproveHours pgtype.Int4        `json:"auto_approve_hours"`
+	OwnerID          string             `json:"owner_id"`
+}
+
+func (q *Queries) ListPendingSubmissionsOlderThan(ctx context.Context, createdAt pgtype.Timestamptz) ([]ListPendingSubmissionsOlderThanRow, error) {
+	rows, err := q.db.Query(ctx, listPendingSubmissionsOlderThan, createdAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPendingSubmissionsOlderThanRow
+	for rows.Next() {
+		var i ListPendingSubmissionsOlderThanRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ClipperID,
+			&i.PostUrl,
+			&i.Platform,
+			&i.PlatformPostID,
+			&i.Status,
+			&i.RejectionReason,
+			&i.ApprovedAt,
+			&i.AutoApprovedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AutoApproveHours,
+			&i.OwnerID,
 		); err != nil {
 			return nil, err
 		}

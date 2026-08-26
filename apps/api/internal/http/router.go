@@ -111,6 +111,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		if campaignSvc != nil {
 			handlers.RegisterCampaignOwnerHandlers(api, campaignSvc)
 		}
+
+		// Submission endpoints (behind auth middleware).
+		if deps.DB != nil {
+			submissionSvc := service.NewSubmissionService(deps.DB.Queries)
+			handlers.RegisterSubmissionHandlers(api, submissionSvc)
+		}
 	})
 
 	return r

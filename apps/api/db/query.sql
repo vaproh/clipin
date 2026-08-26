@@ -121,3 +121,17 @@ SET status = $2,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- name: CountSubmissionsByCampaign :one
+SELECT COUNT(*) FROM submissions WHERE campaign_id = $1;
+
+-- name: CountSubmissionsByClipperForCampaign :one
+SELECT COUNT(*) FROM submissions WHERE campaign_id = $1 AND clipper_id = $2;
+
+-- name: ListPendingSubmissionsOlderThan :many
+SELECT s.*, c.auto_approve_hours, c.owner_id
+FROM submissions s
+JOIN campaigns c ON c.id = s.campaign_id
+WHERE s.status = 'pending'
+  AND s.created_at < $1
+ORDER BY s.created_at ASC;

@@ -395,3 +395,56 @@ export function useRejectSubmission(campaignId: Ref<string>) {
     },
   })
 }
+
+// ---------------------------------------------------------------------------
+// Ledger & Earnings
+// ---------------------------------------------------------------------------
+
+export type LedgerEntryType = 'platform_fee' | 'earning' | 'refund' | 'escrow_lock' | 'escrow_release'
+
+export interface LedgerEntry {
+  id: string
+  idempotency_key: string
+  entry_type: LedgerEntryType
+  campaign_id: string
+  submission_id: string | null
+  clipper_id: string | null
+  amount: number
+  description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface EarningsSummary {
+  total_earnings: number
+  campaign_earnings: Array<{ campaign_id: string; campaign_title: string; amount: number }>
+  recent_entries: LedgerEntry[]
+}
+
+export interface CampaignLedger {
+  entries: LedgerEntry[]
+  total_fees: number
+  total_earnings: number
+  remaining_budget: number
+}
+
+/** Fetch authenticated user's earnings summary. */
+export function useMyEarnings() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['earnings', 'me'],
+    queryFn: () => fetchApi<EarningsSummary>('/me/earnings'),
+  })
+}
+
+/** Fetch ledger for a specific campaign (owner view). */
+export function useCampaignLedger(campaignId: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['ledger', campaignId],
+    queryFn: () => fetchApi<CampaignLedger>(`/me/campaigns/${campaignId.value}/ledger`),
+    enabled: () => !!campaignId.value,
+  })
+}

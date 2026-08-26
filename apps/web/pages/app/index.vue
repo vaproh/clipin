@@ -25,6 +25,14 @@ const { data: myCampaigns, isLoading: campaignsLoading } = useMyCampaigns()
 const activeCampaigns = computed(() =>
   myCampaigns.value?.campaigns.filter((c) => c.status === 'active' || c.status === 'funded') ?? []
 )
+
+const totalSpent = computed(() => {
+  if (!ownerStats.value) return 0
+  return ownerStats.value.total_budget - ownerStats.value.total_remaining
+})
+
+// Clipper data
+const { data: earnings } = useMyEarnings()
 </script>
 
 <template>
@@ -74,8 +82,8 @@ const activeCampaigns = computed(() =>
           :icon="BarChart3"
         />
         <SharedStatCard
-          label="Total budget"
-          :value="statsLoading ? '...' : formatPaise(ownerStats?.total_budget ?? 0)"
+          label="Total spent"
+          :value="statsLoading ? '...' : formatPaise(totalSpent)"
           :icon="CircleDollarSign"
         />
         <SharedStatCard
@@ -154,7 +162,12 @@ const activeCampaigns = computed(() =>
     <template v-else-if="isClipper">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <SharedStatCard label="Role" value="Clipper" :icon="Scissors" />
-        <SharedStatCard label="Earnings" value="—" :icon="Wallet" hint="Ledger opens when views are verified" />
+        <SharedStatCard
+          label="Earnings"
+          :value="earnings ? formatPaise(earnings.total_earnings) : '—'"
+          :icon="Wallet"
+          hint="verified view earnings"
+        />
       </div>
 
       <NuxtLink to="/app/campaigns" class="block">
@@ -169,7 +182,12 @@ const activeCampaigns = computed(() =>
     <div v-else-if="!isLoading" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <SharedStatCard label="Role" :value="roleLabel ?? 'not set'" :icon="Scissors" />
       <SharedStatCard label="Active campaigns" value="0" :icon="Megaphone" />
-      <SharedStatCard label="Earnings" value="—" :icon="Wallet" hint="Ledger opens when views are verified" />
+      <SharedStatCard
+        label="Earnings"
+        :value="earnings ? formatPaise(earnings.total_earnings) : '—'"
+        :icon="Wallet"
+        hint="verified view earnings"
+      />
     </div>
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle, BarChart3 } from 'lucide-vue-next'
+import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle, BarChart3, Receipt } from 'lucide-vue-next'
 import { formatPaise } from '~/lib/utils'
 
 definePageMeta({
@@ -36,6 +36,9 @@ const { mutate: resumeCampaign, isPending: resuming } = useResumeCampaign(id)
 const { mutate: cancelCampaign, isPending: cancelling } = useCancelCampaign(id)
 
 const actionLoading = computed(() => pausing.value || resuming.value || cancelling.value)
+
+// Owner ledger
+const { data: campaignLedger, isLoading: ledgerLoading } = useCampaignLedger(id)
 
 // Submissions
 const isClipper = computed(() => user.value?.role === 'clipper')
@@ -211,6 +214,39 @@ function relativeDate(dateStr: string | null): string {
           </div>
         </div>
       </div>
+
+      <!-- Owner: financial ledger -->
+      <template v-if="isOwner">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white">Financial</h3>
+          </div>
+
+          <SharedLoadingSpinner v-if="ledgerLoading" />
+
+          <template v-else-if="campaignLedger">
+            <!-- Budget overview -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <SharedStatCard label="Total budget" :value="formatPaise(campaign.total_budget)" />
+              <SharedStatCard label="Platform fee" :value="formatPaise(campaignLedger.total_fees)" hint="charged at deposit" />
+              <SharedStatCard label="Total earned" :value="formatPaise(campaignLedger.total_earnings)" hint="by clippers" />
+              <SharedStatCard label="Remaining" :value="formatPaise(campaignLedger.remaining_budget)" />
+            </div>
+
+            <!-- Ledger entries -->
+            <div v-if="campaignLedger.entries.length > 0" class="rounded bg-neutral-950 border border-neutral-800 px-4">
+              <LedgerLedgerEntryRow
+                v-for="entry in campaignLedger.entries.slice(0, 10)"
+                :key="entry.id"
+                :entry="entry"
+              />
+            </div>
+            <div v-else class="rounded bg-neutral-950 border border-neutral-800 p-6 text-center">
+              <p class="text-xs text-neutral-500">No ledger entries yet.</p>
+            </div>
+          </template>
+        </div>
+      </template>
 
       <!-- Actions -->
       <div class="flex items-center gap-2 pt-2">

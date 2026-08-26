@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	sqlc "clipin/apps/api/internal/db/sqlc"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Database struct {
-	Pool *pgxpool.Pool
+	Pool    *pgxpool.Pool
+	Queries *sqlc.Queries
 }
 
 func Connect(ctx context.Context, connString string) (*Database, error) {
@@ -27,7 +30,7 @@ func Connect(ctx context.Context, connString string) (*Database, error) {
 		return nil, fmt.Errorf("unable to create pgxpool: %w", err)
 	}
 
-	return &Database{Pool: pool}, nil
+	return &Database{Pool: pool, Queries: sqlc.New(pool)}, nil
 }
 
 func (d *Database) Ping(ctx context.Context) error {

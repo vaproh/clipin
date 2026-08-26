@@ -79,11 +79,24 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	// Handlers (public: /health, /openapi.json, /docs stay on the root router)
 	handlers.RegisterHealthHandler(api, deps, deps.Config.Env)
 
-	// Authenticated routes live in this group, behind Clerk JWT verification.
-	// The middleware no-ops when CLERK_JWKS_URL is unset (development).
+	// Authenticated routes live in this group, behind Clerk JWT verification
+	// and session loading. The middleware no-ops when CLERK_JWKS_URL is unset
+	// (development).
+	//
+	// The group binds its own huma.API so protected handlers stay behind the
+	// middleware chain; their OpenAPI schemas are not served on the root API.
 	r.Group(func(r chi.Router) {
+		api := humachi.New(r, humaConfig)
+
+		var userStore auth.UserStore
+		if deps.DB != nil {
+			userStore = deps.DB.Queries
+		}
+
 		r.Use(auth.AuthMiddleware(auth.NewJWKSProvider(deps.Config.ClerkJWKSURL)))
-		// Private handlers register here in later milestones.
+		r.Use(auth.SessionMiddleware(userStore))
+
+		handlers.RegisterUserHandlers(api, userStore)
 	})
 
 	return r

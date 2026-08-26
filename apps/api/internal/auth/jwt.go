@@ -18,7 +18,9 @@ const jwksTTL = 5 * time.Minute
 
 // Claims carries the identity extracted from a verified Clerk JWT.
 type Claims struct {
-	Sub string `json:"sub"`
+	Sub   string `json:"sub"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
 	jwt.RegisteredClaims
 }
 

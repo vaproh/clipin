@@ -3,6 +3,8 @@ import type { Component } from 'vue'
 import { useRoute } from '#app'
 import { LayoutDashboard, Megaphone, Video, Wallet, CreditCard, Settings, Shield } from 'lucide-vue-next'
 
+const emit = defineEmits<{ navigate: [] }>()
+
 const route = useRoute()
 const { data: profile } = useUserQuery()
 
@@ -52,6 +54,7 @@ const isAdmin = computed(() => profile.value?.role === 'admin')
               ? 'bg-neutral-900 text-white border border-neutral-800'
               : 'text-neutral-400 hover:text-white hover:bg-neutral-950'
           ]"
+          @click="emit('navigate')"
         >
           <div class="flex items-center gap-2.5">
             <component :is="item.icon" class="w-4 h-4 text-neutral-400" :class="{ 'text-white': route.path === item.path }" />
@@ -76,6 +79,7 @@ const isAdmin = computed(() => profile.value?.role === 'admin')
               ? 'bg-neutral-900 text-white border border-neutral-800'
               : 'text-neutral-400 hover:text-white hover:bg-neutral-950'
           ]"
+          @click="emit('navigate')"
         >
           <div class="flex items-center gap-2.5">
             <component :is="item.icon" class="w-4 h-4 text-neutral-400" :class="{ 'text-white': route.path === item.path }" />

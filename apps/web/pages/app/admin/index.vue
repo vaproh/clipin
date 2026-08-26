@@ -166,18 +166,18 @@ function formatDateTime(iso: string) {
                 <UiInput
                   v-model="resolutionText"
                   placeholder="Resolution..."
-                  class="h-7 w-40 text-[11px]"
+                  class="h-9 w-full sm:w-40 text-[11px]"
                   @keyup.enter="handleResolve(flag.id)"
                 />
-                <UiButton size="xs" class="h-7" @click="handleResolve(flag.id)">Save</UiButton>
-                <UiButton size="xs" variant="ghost" class="h-7" @click="resolvingId = null; resolutionText = ''">Cancel</UiButton>
+                <UiButton size="xs" class="h-9" @click="handleResolve(flag.id)">Save</UiButton>
+                <UiButton size="xs" variant="ghost" class="h-9" @click="resolvingId = null; resolutionText = ''">Cancel</UiButton>
               </template>
               <template v-else>
-                <UiButton size="xs" variant="secondary" class="h-7 gap-1" @click="resolvingId = flag.id; resolutionText = ''">
+                <UiButton size="xs" variant="secondary" class="h-9 gap-1" @click="resolvingId = flag.id; resolutionText = ''">
                   <CheckCircle class="w-3 h-3" />
                   Resolve
                 </UiButton>
-                <UiButton size="xs" variant="ghost" class="h-7 gap-1" @click="handleDismiss(flag.id)">
+                <UiButton size="xs" variant="ghost" class="h-9 gap-1" @click="handleDismiss(flag.id)">
                   <XCircle class="w-3 h-3" />
                   Dismiss
                 </UiButton>
@@ -199,7 +199,8 @@ function formatDateTime(iso: string) {
 
       <template v-else>
         <div class="rounded bg-neutral-950 border border-neutral-800 overflow-hidden">
-          <table class="w-full text-xs font-mono">
+          <div class="overflow-x-auto">
+          <table class="w-full text-xs font-mono min-w-[480px]">
             <thead>
               <tr class="border-b border-neutral-800">
                 <th class="text-left px-4 py-2.5 text-neutral-500 font-medium">User</th>
@@ -235,6 +236,7 @@ function formatDateTime(iso: string) {
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <!-- Pagination -->
@@ -242,7 +244,7 @@ function formatDateTime(iso: string) {
           <UiButton
             variant="ghost"
             size="sm"
-            class="w-8 h-8 p-0"
+            class="w-10 h-10 p-0"
             :disabled="usersPage <= 1"
             @click="usersPage--"
           >
@@ -253,7 +255,7 @@ function formatDateTime(iso: string) {
             :key="p"
             :variant="p === usersPage ? 'default' : 'ghost'"
             size="sm"
-            class="w-8 h-8 p-0 font-mono text-xs"
+            class="w-10 h-10 p-0 font-mono text-xs"
             @click="usersPage = p"
           >
             {{ p }}
@@ -261,7 +263,7 @@ function formatDateTime(iso: string) {
           <UiButton
             variant="ghost"
             size="sm"
-            class="w-8 h-8 p-0"
+            class="w-10 h-10 p-0"
             :disabled="usersPage >= totalUserPages"
             @click="usersPage++"
           >
@@ -282,7 +284,8 @@ function formatDateTime(iso: string) {
 
       <template v-else>
         <div class="rounded bg-neutral-950 border border-neutral-800 overflow-hidden">
-          <table class="w-full text-xs font-mono">
+          <div class="overflow-x-auto">
+          <table class="w-full text-xs font-mono min-w-[480px]">
             <thead>
               <tr class="border-b border-neutral-800">
                 <th class="text-left px-4 py-2.5 text-neutral-500 font-medium">Action</th>
@@ -316,6 +319,7 @@ function formatDateTime(iso: string) {
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <!-- Pagination -->
@@ -323,7 +327,7 @@ function formatDateTime(iso: string) {
           <UiButton
             variant="ghost"
             size="sm"
-            class="w-8 h-8 p-0"
+            class="w-10 h-10 p-0"
             :disabled="logsPage <= 1"
             @click="logsPage--"
           >
@@ -334,7 +338,7 @@ function formatDateTime(iso: string) {
             :key="p"
             :variant="p === logsPage ? 'default' : 'ghost'"
             size="sm"
-            class="w-8 h-8 p-0 font-mono text-xs"
+            class="w-10 h-10 p-0 font-mono text-xs"
             @click="logsPage = p"
           >
             {{ p }}
@@ -342,7 +346,7 @@ function formatDateTime(iso: string) {
           <UiButton
             variant="ghost"
             size="sm"
-            class="w-8 h-8 p-0"
+            class="w-10 h-10 p-0"
             :disabled="logsPage >= totalLogPages"
             @click="logsPage++"
           >

@@ -235,3 +235,102 @@ export function useResumeCampaign(id: Ref<string>) {
 export function useCancelCampaign(id: Ref<string>) {
   return useCampaignAction(id, 'cancel')
 }
+
+// ---------------------------------------------------------------------------
+// Submissions
+// ---------------------------------------------------------------------------
+
+export type SubmissionStatus = 'pending' | 'approved' | 'rejected' | 'auto_approved' | 'disputed'
+
+export interface Submission {
+  id: string
+  campaign_id: string
+  clipper_id: string
+  post_url: string
+  platform: string
+  platform_post_id: string | null
+  status: SubmissionStatus
+  rejection_reason: string | null
+  approved_at: string | null
+  auto_approved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SubmissionListResponse {
+  submissions: Submission[]
+}
+
+/** Fetch submissions for a campaign (owner view). */
+export function useCampaignSubmissions(campaignId: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['campaignSubmissions', campaignId],
+    queryFn: () => fetchApi<SubmissionListResponse>(`/campaigns/${campaignId.value}/submissions`),
+    enabled: () => !!campaignId.value,
+  })
+}
+
+/** Fetch the authenticated user's own submissions. */
+export function useMySubmissions() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['mySubmissions'],
+    queryFn: () => fetchApi<SubmissionListResponse>('/me/submissions'),
+  })
+}
+
+/** Submit a clip to a campaign. */
+export function useSubmitClip(campaignId: Ref<string>) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (body: { post_url: string; platform: string }) =>
+      fetchApi<Submission>(`/campaigns/${campaignId.value}/submissions`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mySubmissions'] })
+      queryClient.invalidateQueries({ queryKey: ['campaignSubmissions', campaignId] })
+    },
+  })
+}
+
+/** Approve a submission (campaign owner). */
+export function useApproveSubmission(campaignId: Ref<string>) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (submissionId: string) =>
+      fetchApi<Submission>(`/submissions/${submissionId}/approve`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaignSubmissions', campaignId] })
+      queryClient.invalidateQueries({ queryKey: ['mySubmissions'] })
+    },
+  })
+}
+
+/** Reject a submission (campaign owner). */
+export function useRejectSubmission(campaignId: Ref<string>) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: ({ submissionId, reason }: { submissionId: string; reason?: string }) =>
+      fetchApi<Submission>(`/submissions/${submissionId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaignSubmissions', campaignId] })
+      queryClient.invalidateQueries({ queryKey: ['mySubmissions'] })
+    },
+  })
+}

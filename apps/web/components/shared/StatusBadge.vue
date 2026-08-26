@@ -13,6 +13,8 @@ const tones: Record<string, { badge: string; dot: string }> = {
   paused: { badge: 'bg-neutral-900 text-neutral-300 border-neutral-700', dot: 'bg-neutral-500' },
   draft: { badge: 'bg-neutral-950 text-neutral-400 border-neutral-800', dot: 'bg-neutral-600' },
   rejected: { badge: 'bg-neutral-950 text-neutral-500 border-neutral-800', dot: 'bg-neutral-700' },
+  auto_approved: { badge: 'bg-neutral-800 text-neutral-300 border-neutral-600', dot: 'bg-neutral-400' },
+  disputed: { badge: 'bg-neutral-950 text-neutral-400 border-neutral-700', dot: 'bg-neutral-600' },
   ended: { badge: 'bg-neutral-950 text-neutral-500 border-neutral-800', dot: 'bg-neutral-700' },
   default: { badge: 'bg-neutral-900 text-neutral-300 border-neutral-800', dot: 'bg-neutral-500' },
 }

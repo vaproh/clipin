@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer } from 'lucide-vue-next'
+import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle } from 'lucide-vue-next'
 import { formatPaise } from '~/lib/utils'
 
 definePageMeta({
@@ -36,6 +36,48 @@ const { mutate: resumeCampaign, isPending: resuming } = useResumeCampaign(id)
 const { mutate: cancelCampaign, isPending: cancelling } = useCancelCampaign(id)
 
 const actionLoading = computed(() => pausing.value || resuming.value || cancelling.value)
+
+// Submissions
+const isClipper = computed(() => user.value?.role === 'clipper')
+const isActive = computed(() => campaign.value?.status === 'active')
+const canSubmit = computed(() => isClipper.value && isActive.value && !isOwner.value)
+
+const { data: mySubmissionsData } = useMySubmissions()
+const mySubmissionCount = computed(() => {
+  if (!mySubmissionsData.value) return 0
+  return mySubmissionsData.value.submissions.filter((s) => s.campaign_id === id.value).length
+})
+
+const { data: campaignSubmissionsData } = useCampaignSubmissions(id)
+const campaignSubmissions = computed(() => campaignSubmissionsData.value?.submissions ?? [])
+const pendingCount = computed(() => campaignSubmissions.value.filter((s) => s.status === 'pending').length)
+
+// Reject dialog state
+const rejectTarget = ref<string | null>(null)
+const rejectReason = ref('')
+const { mutate: approveSubmission, isPending: approving } = useApproveSubmission(id)
+const { mutate: rejectSubmission, isPending: rejecting } = useRejectSubmission(id)
+
+function handleApprove(submissionId: string) {
+  approveSubmission(submissionId)
+}
+
+function handleRejectRequest(submissionId: string) {
+  rejectTarget.value = submissionId
+  rejectReason.value = ''
+}
+
+function confirmReject() {
+  if (!rejectTarget.value) return
+  rejectSubmission(
+    { submissionId: rejectTarget.value, reason: rejectReason.value || undefined },
+    { onSuccess: () => { rejectTarget.value = null; rejectReason.value = '' } }
+  )
+}
+
+function onDialogChange(open: boolean) {
+  if (!open) rejectTarget.value = null
+}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-'
@@ -168,7 +210,8 @@ function relativeDate(dateStr: string | null): string {
 
       <!-- Actions -->
       <div class="flex items-center gap-2 pt-2">
-        <UiButton v-if="!isOwner" size="sm">
+        <UiButton v-if="canSubmit" size="sm" class="gap-1.5">
+          <Send class="w-3.5 h-3.5" />
           Submit a clip
         </UiButton>
         <template v-if="isOwner">
@@ -209,6 +252,60 @@ function relativeDate(dateStr: string | null): string {
           </UiButton>
         </template>
       </div>
+
+      <!-- Clipper: submit form + existing count -->
+      <template v-if="canSubmit">
+        <SubmissionSubmitClipForm :campaign-id="id" :campaign="campaign" />
+        <div v-if="mySubmissionCount > 0" class="text-xs font-mono text-neutral-500">
+          You've already submitted {{ mySubmissionCount }} clip{{ mySubmissionCount === 1 ? '' : 's' }} to this campaign.
+        </div>
+      </template>
+
+      <!-- Owner: submissions -->
+      <template v-if="isOwner && campaignSubmissions.length > 0">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-white">
+            Submissions
+            <span class="text-neutral-500 font-normal">({{ campaignSubmissions.length }}<span v-if="pendingCount > 0">, {{ pendingCount }} pending</span>)</span>
+          </h3>
+          <NuxtLink :to="`/app/campaigns/${id}/submissions`" class="text-xs font-mono text-neutral-500 hover:text-white transition-colors">
+            View all
+          </NuxtLink>
+        </div>
+        <div class="space-y-3">
+          <SubmissionSubmissionCard
+            v-for="sub in campaignSubmissions.slice(0, 5)"
+            :key="sub.id"
+            :submission="sub"
+            show-actions
+            @approve="handleApprove"
+            @reject="handleRejectRequest"
+          />
+        </div>
+      </template>
+
+      <!-- Reject dialog -->
+      <UiDialog :open="!!rejectTarget" @update:open="onDialogChange">
+        <UiDialogContent class="sm:max-w-md">
+          <UiDialogHeader>
+            <UiDialogTitle>Reject Submission</UiDialogTitle>
+            <UiDialogDescription>Optionally provide a reason for the clipper.</UiDialogDescription>
+          </UiDialogHeader>
+          <textarea
+            v-model="rejectReason"
+            rows="3"
+            placeholder="Reason for rejection (optional)"
+            class="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm text-white placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-700 resize-none"
+          />
+          <UiDialogFooter>
+            <UiButton variant="ghost" size="sm" @click="rejectTarget.value = null">Cancel</UiButton>
+            <UiButton size="sm" class="gap-1.5" :disabled="rejecting" @click="confirmReject">
+              <XCircle class="w-3.5 h-3.5" />
+              {{ rejecting ? 'Rejecting...' : 'Reject' }}
+            </UiButton>
+          </UiDialogFooter>
+        </UiDialogContent>
+      </UiDialog>
     </template>
   </div>
 </template>

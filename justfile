@@ -19,6 +19,10 @@ db-down:
 db-logs:
     docker compose logs -f
 
+# Run database migrations (action: up, down, status, goto)
+migrate action='up':
+    cd apps/api && go run ./cmd/migrate/ {{action}}
+
 # Run frontend dev server
 dev-frontend:
     @echo "Starting Frontend on http://localhost:3000..."

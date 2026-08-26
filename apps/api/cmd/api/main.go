@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,11 +18,22 @@ import (
 )
 
 func main() {
+	migrateFlag := flag.Bool("migrate", false, "Run database migrations before starting")
+	flag.Parse()
+
 	log.Println("Starting ClipIN API service...")
 
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	if *migrateFlag {
+		log.Println("Running migrations...")
+		if err := db.MigrateUp(cfg.DatabaseURL); err != nil {
+			log.Fatalf("Migration failed: %v", err)
+		}
+		log.Println("Migrations applied")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

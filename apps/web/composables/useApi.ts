@@ -8,6 +8,7 @@ export interface UserProfile {
   email: string
   display_name: string
   role: UserRole
+  upi_id: string | null
   created_at: string
   updated_at: string
 }
@@ -393,6 +394,77 @@ export function useRejectSubmission(campaignId: Ref<string>) {
       queryClient.invalidateQueries({ queryKey: ['campaignSubmissions', campaignId] })
       queryClient.invalidateQueries({ queryKey: ['mySubmissions'] })
     },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Payouts
+// ---------------------------------------------------------------------------
+
+export type PayoutStatus = 'pending' | 'processing' | 'completed' | 'failed'
+
+export interface PayoutRequest {
+  id: string
+  clipper_id: string
+  amount: number
+  upi_id: string
+  status: PayoutStatus
+  provider_ref: string | null
+  failure_reason: string | null
+  idempotency_key: string
+  created_at: string
+  processed_at: string | null
+  updated_at: string
+}
+
+export interface PayoutListResponse {
+  payout_requests: PayoutRequest[]
+}
+
+/** Update the authenticated user's UPI ID. */
+export function useUpdateUPI() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (upi_id: string) =>
+      fetchApi<{ upi_id: string }>('/me/upi', {
+        method: 'PATCH',
+        body: JSON.stringify({ upi_id }),
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['me'], (old: UserProfile | undefined) =>
+        old ? { ...old, upi_id: data.upi_id } : old,
+      )
+    },
+  })
+}
+
+/** Request a payout. */
+export function useRequestPayout() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (amount: number) =>
+      fetchApi<PayoutRequest>('/me/payouts', {
+        method: 'POST',
+        body: JSON.stringify({ amount }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payouts'] })
+      queryClient.invalidateQueries({ queryKey: ['earnings', 'me'] })
+    },
+  })
+}
+
+/** Fetch the authenticated user's payout history. */
+export function useMyPayouts() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['payouts'],
+    queryFn: () => fetchApi<PayoutListResponse>('/me/payouts'),
   })
 }
 

@@ -8,6 +8,16 @@ definePageMeta({
 })
 
 const { data: earnings, isLoading } = useMyEarnings()
+const { data: payoutsRes } = useMyPayouts()
+
+const pendingPayoutTotal = computed(() =>
+  (payoutsRes.value?.payout_requests ?? [])
+    .filter((p) => p.status === 'pending' || p.status === 'processing')
+    .reduce((sum, p) => sum + p.amount, 0),
+)
+
+const availableBalance = computed(() => (earnings.value?.total_earnings ?? 0) - pendingPayoutTotal.value)
+const canWithdraw = computed(() => availableBalance.value >= 50_000)
 
 const hasEarnings = computed(() => {
   if (!earnings.value) return false
@@ -47,6 +57,16 @@ const totalSubmissions = computed(() => {
           :icon="Wallet"
         />
       </div>
+
+      <!-- Withdraw CTA -->
+      <NuxtLink
+        v-if="canWithdraw"
+        to="/app/payouts"
+        class="inline-flex items-center gap-2 rounded border border-neutral-700 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200 transition-colors"
+      >
+        Withdraw {{ formatPaise(availableBalance) }}
+        <ArrowRight class="w-3.5 h-3.5" />
+      </NuxtLink>
 
       <!-- Campaign breakdown -->
       <div v-if="earnings.campaign_earnings.length > 0" class="space-y-3">

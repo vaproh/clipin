@@ -92,22 +92,20 @@ just build
 
 Open marketplace for performance clipping campaigns. Content owners fund escrow pools, clippers publish short-form clips, verified views drive earnings and UPI payouts.
 
-Phase 1 foundation (scaffolding, landing, Clerk auth, app shell) is built. Remaining execution follows the milestone plan in `AGENTS.md`:
+All milestones M0-M9 are complete. Deployment excluded until production infra exists.
 
-| Milestone | Deliverable |
-|---|---|
-| M0 | Foundation: migrations, sqlc, Clerk JWT middleware, CI |
-| M1 | Users, roles, onboarding |
-| M2 | Campaign marketplace (list, filters, detail) |
-| M3 | Campaign creation + owner dashboard |
-| M4 | Submissions (lifecycle, review, dedupe) |
-| M5 | Verification contract (snapshots, deltas, eligible views) |
-| M6 | Append-only financial ledger |
-| M7 | Payouts (UPI, stubbed Razorpay) |
-| M8 | Admin controls, fraud flags, audit logs |
-| M9 | Launch polish (SEO, notifications, perf) |
-
-Deployment excluded until production infra exists.
+| Milestone | Deliverable | Status |
+|---|---|---|
+| M0 | Foundation: migrations, sqlc, Clerk JWT middleware, CI | Done |
+| M1 | Users, roles, onboarding | Done |
+| M2 | Campaign marketplace (list, filters, detail) | Done |
+| M3 | Campaign creation + owner dashboard | Done |
+| M4 | Submissions (lifecycle, review, dedupe) | Done |
+| M5 | Verification contract (snapshots, deltas, eligible views) | Done |
+| M6 | Append-only financial ledger | Done |
+| M7 | Payouts (UPI, stubbed Razorpay) | Done |
+| M8 | Admin controls, fraud flags, audit logs | Done |
+| M9 | Launch polish (SEO, meta tags, build verification) | Done |
 
 ## Repository structure
 

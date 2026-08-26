@@ -2,6 +2,11 @@
 definePageMeta({
   layout: false,
 })
+
+useSeoMeta({
+  title: 'Sign Up - ClipIN',
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>

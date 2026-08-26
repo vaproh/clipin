@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import AppSidebar from '~/components/app/AppSidebar.vue'
 import AppHeader from '~/components/app/AppHeader.vue'
+
+useSeoMeta({
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>

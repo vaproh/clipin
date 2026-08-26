@@ -7,6 +7,10 @@ export default defineNuxtConfig({
     appManifest: false,
   },
 
+  site: {
+    url: process.env.NUXT_PUBLIC_SITE_URL || 'https://clipin.in',
+  },
+
   modules: [
     [
       '@clerk/nuxt',
@@ -59,14 +63,23 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'ClipIN — India\'s Performance Clipping Marketplace',
+      title: 'ClipIN - Performance Clipping Marketplace',
+      htmlAttrs: { lang: 'en' },
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
-          content: 'ClipIN connects content owners with clippers to turn long-form content into distributed short-form reach. Clip. Post. Get Paid.',
+          content: 'India\'s open marketplace for performance clipping. Fund campaigns, create clips, earn from verified views.',
         },
+        { name: 'theme-color', content: '#000000' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: 'ClipIN - Performance Clipping Marketplace' },
+        { property: 'og:description', content: 'India\'s open marketplace for performance clipping. Fund campaigns, create clips, earn from verified views.' },
+        { property: 'og:site_name', content: 'ClipIN' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'ClipIN - Performance Clipping Marketplace' },
+        { name: 'twitter:description', content: 'India\'s open marketplace for performance clipping. Fund campaigns, create clips, earn from verified views.' },
       ],
       link: [
         {

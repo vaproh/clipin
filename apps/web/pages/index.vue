@@ -12,6 +12,15 @@ import Footer from '~/components/landing/Footer.vue'
 definePageMeta({
   layout: false,
 })
+
+useSeoMeta({
+  title: 'ClipIN - Performance Clipping Marketplace',
+  description: 'India\'s open marketplace for performance clipping. Fund campaigns, create clips, earn from verified views.',
+  ogTitle: 'ClipIN - Performance Clipping Marketplace',
+  ogDescription: 'India\'s open marketplace for performance clipping. Fund campaigns, create clips, earn from verified views.',
+  ogImage: '/og-image.png',
+  twitterCard: 'summary_large_image',
+})
 </script>
 
 <template>

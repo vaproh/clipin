@@ -17,6 +17,8 @@ type mockCampaignStore struct {
 	listFiltered    func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error)
 	countFiltered   func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error)
 	listByOwner     func(ctx context.Context, ownerID string) ([]sqlc.Campaign, error)
+	createCampaign  func(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error)
+	updateStatus    func(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error)
 }
 
 func (m *mockCampaignStore) GetCampaignByID(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
@@ -45,6 +47,20 @@ func (m *mockCampaignStore) ListCampaignsByOwner(ctx context.Context, ownerID st
 		return m.listByOwner(ctx, ownerID)
 	}
 	return nil, nil
+}
+
+func (m *mockCampaignStore) CreateCampaign(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error) {
+	if m.createCampaign != nil {
+		return m.createCampaign(ctx, arg)
+	}
+	return sqlc.Campaign{}, nil
+}
+
+func (m *mockCampaignStore) UpdateCampaignStatus(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error) {
+	if m.updateStatus != nil {
+		return m.updateStatus(ctx, arg)
+	}
+	return sqlc.Campaign{}, nil
 }
 
 func testCampaign(id string, ownerID string, title string, status string) sqlc.Campaign {

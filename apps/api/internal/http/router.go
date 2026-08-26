@@ -106,6 +106,11 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		r.Use(auth.SessionMiddleware(userStore))
 
 		handlers.RegisterUserHandlers(api, userStore)
+
+		// Owner campaign management endpoints (behind auth middleware).
+		if campaignSvc != nil {
+			handlers.RegisterCampaignOwnerHandlers(api, campaignSvc)
+		}
 	})
 
 	return r

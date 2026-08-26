@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL    string
 	RedisURL       string
 	ClerkJWKSURL   string
+	VerifierAPIKey string
 	AllowedOrigins []string
 }
 
@@ -26,6 +27,7 @@ func Load() (*Config, error) {
 		DatabaseURL:    getEnv("DATABASE_URL", "postgres://clipin:clipin_dev_pass@localhost:5433/clipin_dev?sslmode=disable"),
 		RedisURL:       getEnv("REDIS_URL", "redis://localhost:6380/0"),
 		ClerkJWKSURL:   getEnv("CLERK_JWKS_URL", ""),
+		VerifierAPIKey: getEnv("VERIFIER_API_KEY", ""),
 		AllowedOrigins: parseCSV(getEnv("ALLOWED_ORIGINS", "http://localhost:3000")),
 	}
 

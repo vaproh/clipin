@@ -33,6 +33,18 @@ func (q *Queries) CountCampaignsFiltered(ctx context.Context, arg CountCampaigns
 	return count, err
 }
 
+const countSnapshotsBySubmission = `-- name: CountSnapshotsBySubmission :one
+SELECT COUNT(*) FROM metric_snapshots
+WHERE submission_id = $1
+`
+
+func (q *Queries) CountSnapshotsBySubmission(ctx context.Context, submissionID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSnapshotsBySubmission, submissionID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSubmissionsByCampaign = `-- name: CountSubmissionsByCampaign :one
 SELECT COUNT(*) FROM submissions WHERE campaign_id = $1
 `
@@ -139,6 +151,47 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 		&i.EndsAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createMetricSnapshot = `-- name: CreateMetricSnapshot :one
+INSERT INTO metric_snapshots (submission_id, platform, views, likes, comments, shares, captured_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, submission_id, platform, views, likes, comments, shares, captured_at, created_at
+`
+
+type CreateMetricSnapshotParams struct {
+	SubmissionID pgtype.UUID        `json:"submission_id"`
+	Platform     string             `json:"platform"`
+	Views        int64              `json:"views"`
+	Likes        int64              `json:"likes"`
+	Comments     int64              `json:"comments"`
+	Shares       int64              `json:"shares"`
+	CapturedAt   pgtype.Timestamptz `json:"captured_at"`
+}
+
+func (q *Queries) CreateMetricSnapshot(ctx context.Context, arg CreateMetricSnapshotParams) (MetricSnapshot, error) {
+	row := q.db.QueryRow(ctx, createMetricSnapshot,
+		arg.SubmissionID,
+		arg.Platform,
+		arg.Views,
+		arg.Likes,
+		arg.Comments,
+		arg.Shares,
+		arg.CapturedAt,
+	)
+	var i MetricSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.SubmissionID,
+		&i.Platform,
+		&i.Views,
+		&i.Likes,
+		&i.Comments,
+		&i.Shares,
+		&i.CapturedAt,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -305,6 +358,54 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign
 	return i, err
 }
 
+const getInitialSnapshotForSubmission = `-- name: GetInitialSnapshotForSubmission :one
+SELECT id, submission_id, platform, views, likes, comments, shares, captured_at, created_at FROM metric_snapshots
+WHERE submission_id = $1
+ORDER BY captured_at ASC
+LIMIT 1
+`
+
+func (q *Queries) GetInitialSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error) {
+	row := q.db.QueryRow(ctx, getInitialSnapshotForSubmission, submissionID)
+	var i MetricSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.SubmissionID,
+		&i.Platform,
+		&i.Views,
+		&i.Likes,
+		&i.Comments,
+		&i.Shares,
+		&i.CapturedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getLatestSnapshotForSubmission = `-- name: GetLatestSnapshotForSubmission :one
+SELECT id, submission_id, platform, views, likes, comments, shares, captured_at, created_at FROM metric_snapshots
+WHERE submission_id = $1
+ORDER BY captured_at DESC
+LIMIT 1
+`
+
+func (q *Queries) GetLatestSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error) {
+	row := q.db.QueryRow(ctx, getLatestSnapshotForSubmission, submissionID)
+	var i MetricSnapshot
+	err := row.Scan(
+		&i.ID,
+		&i.SubmissionID,
+		&i.Platform,
+		&i.Views,
+		&i.Likes,
+		&i.Comments,
+		&i.Shares,
+		&i.CapturedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSubmissionByID = `-- name: GetSubmissionByID :one
 SELECT id, campaign_id, clipper_id, post_url, platform, platform_post_id, status, rejection_reason, approved_at, auto_approved_at, created_at, updated_at FROM submissions WHERE id = $1
 `
@@ -327,6 +428,120 @@ func (q *Queries) GetSubmissionByID(ctx context.Context, id pgtype.UUID) (Submis
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getSubmissionWithCampaign = `-- name: GetSubmissionWithCampaign :one
+SELECT s.id, s.campaign_id, s.clipper_id, s.post_url, s.platform, s.platform_post_id, s.status, s.rejection_reason, s.approved_at, s.auto_approved_at, s.created_at, s.updated_at, c.min_views_per_clip, c.cpm_rate, c.owner_id
+FROM submissions s
+JOIN campaigns c ON s.campaign_id = c.id
+WHERE s.id = $1
+`
+
+type GetSubmissionWithCampaignRow struct {
+	ID              pgtype.UUID        `json:"id"`
+	CampaignID      pgtype.UUID        `json:"campaign_id"`
+	ClipperID       string             `json:"clipper_id"`
+	PostUrl         string             `json:"post_url"`
+	Platform        string             `json:"platform"`
+	PlatformPostID  pgtype.Text        `json:"platform_post_id"`
+	Status          string             `json:"status"`
+	RejectionReason pgtype.Text        `json:"rejection_reason"`
+	ApprovedAt      pgtype.Timestamptz `json:"approved_at"`
+	AutoApprovedAt  pgtype.Timestamptz `json:"auto_approved_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	MinViewsPerClip pgtype.Int4        `json:"min_views_per_clip"`
+	CpmRate         int32              `json:"cpm_rate"`
+	OwnerID         string             `json:"owner_id"`
+}
+
+func (q *Queries) GetSubmissionWithCampaign(ctx context.Context, id pgtype.UUID) (GetSubmissionWithCampaignRow, error) {
+	row := q.db.QueryRow(ctx, getSubmissionWithCampaign, id)
+	var i GetSubmissionWithCampaignRow
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.ClipperID,
+		&i.PostUrl,
+		&i.Platform,
+		&i.PlatformPostID,
+		&i.Status,
+		&i.RejectionReason,
+		&i.ApprovedAt,
+		&i.AutoApprovedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MinViewsPerClip,
+		&i.CpmRate,
+		&i.OwnerID,
+	)
+	return i, err
+}
+
+const getSubmissionsNeedingVerification = `-- name: GetSubmissionsNeedingVerification :many
+SELECT s.id, s.campaign_id, s.clipper_id, s.post_url, s.platform, s.platform_post_id, s.status, s.rejection_reason, s.approved_at, s.auto_approved_at, s.created_at, s.updated_at, c.min_views_per_clip, c.cpm_rate, c.owner_id
+FROM submissions s
+JOIN campaigns c ON s.campaign_id = c.id
+WHERE s.status IN ('approved', 'auto_approved')
+  AND s.id NOT IN (
+    SELECT submission_id FROM metric_snapshots
+    WHERE captured_at > NOW() - INTERVAL '1 hour'
+  )
+LIMIT $1
+`
+
+type GetSubmissionsNeedingVerificationRow struct {
+	ID              pgtype.UUID        `json:"id"`
+	CampaignID      pgtype.UUID        `json:"campaign_id"`
+	ClipperID       string             `json:"clipper_id"`
+	PostUrl         string             `json:"post_url"`
+	Platform        string             `json:"platform"`
+	PlatformPostID  pgtype.Text        `json:"platform_post_id"`
+	Status          string             `json:"status"`
+	RejectionReason pgtype.Text        `json:"rejection_reason"`
+	ApprovedAt      pgtype.Timestamptz `json:"approved_at"`
+	AutoApprovedAt  pgtype.Timestamptz `json:"auto_approved_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	MinViewsPerClip pgtype.Int4        `json:"min_views_per_clip"`
+	CpmRate         int32              `json:"cpm_rate"`
+	OwnerID         string             `json:"owner_id"`
+}
+
+func (q *Queries) GetSubmissionsNeedingVerification(ctx context.Context, limit int32) ([]GetSubmissionsNeedingVerificationRow, error) {
+	rows, err := q.db.Query(ctx, getSubmissionsNeedingVerification, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSubmissionsNeedingVerificationRow
+	for rows.Next() {
+		var i GetSubmissionsNeedingVerificationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ClipperID,
+			&i.PostUrl,
+			&i.Platform,
+			&i.PlatformPostID,
+			&i.Status,
+			&i.RejectionReason,
+			&i.ApprovedAt,
+			&i.AutoApprovedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MinViewsPerClip,
+			&i.CpmRate,
+			&i.OwnerID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -576,6 +791,42 @@ func (q *Queries) ListPendingSubmissionsOlderThan(ctx context.Context, createdAt
 			&i.UpdatedAt,
 			&i.AutoApproveHours,
 			&i.OwnerID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSnapshotsBySubmission = `-- name: ListSnapshotsBySubmission :many
+SELECT id, submission_id, platform, views, likes, comments, shares, captured_at, created_at FROM metric_snapshots
+WHERE submission_id = $1
+ORDER BY captured_at ASC
+`
+
+func (q *Queries) ListSnapshotsBySubmission(ctx context.Context, submissionID pgtype.UUID) ([]MetricSnapshot, error) {
+	rows, err := q.db.Query(ctx, listSnapshotsBySubmission, submissionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MetricSnapshot
+	for rows.Next() {
+		var i MetricSnapshot
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubmissionID,
+			&i.Platform,
+			&i.Views,
+			&i.Likes,
+			&i.Comments,
+			&i.Shares,
+			&i.CapturedAt,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

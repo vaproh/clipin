@@ -135,3 +135,46 @@ JOIN campaigns c ON c.id = s.campaign_id
 WHERE s.status = 'pending'
   AND s.created_at < $1
 ORDER BY s.created_at ASC;
+
+-- name: CreateMetricSnapshot :one
+INSERT INTO metric_snapshots (submission_id, platform, views, likes, comments, shares, captured_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING *;
+
+-- name: GetLatestSnapshotForSubmission :one
+SELECT * FROM metric_snapshots
+WHERE submission_id = $1
+ORDER BY captured_at DESC
+LIMIT 1;
+
+-- name: GetInitialSnapshotForSubmission :one
+SELECT * FROM metric_snapshots
+WHERE submission_id = $1
+ORDER BY captured_at ASC
+LIMIT 1;
+
+-- name: ListSnapshotsBySubmission :many
+SELECT * FROM metric_snapshots
+WHERE submission_id = $1
+ORDER BY captured_at ASC;
+
+-- name: CountSnapshotsBySubmission :one
+SELECT COUNT(*) FROM metric_snapshots
+WHERE submission_id = $1;
+
+-- name: GetSubmissionsNeedingVerification :many
+SELECT s.*, c.min_views_per_clip, c.cpm_rate, c.owner_id
+FROM submissions s
+JOIN campaigns c ON s.campaign_id = c.id
+WHERE s.status IN ('approved', 'auto_approved')
+  AND s.id NOT IN (
+    SELECT submission_id FROM metric_snapshots
+    WHERE captured_at > NOW() - INTERVAL '1 hour'
+  )
+LIMIT $1;
+
+-- name: GetSubmissionWithCampaign :one
+SELECT s.*, c.min_views_per_clip, c.cpm_rate, c.owner_id
+FROM submissions s
+JOIN campaigns c ON s.campaign_id = c.id
+WHERE s.id = $1;

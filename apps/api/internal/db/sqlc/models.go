@@ -31,6 +31,18 @@ type Campaign struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type MetricSnapshot struct {
+	ID           pgtype.UUID        `json:"id"`
+	SubmissionID pgtype.UUID        `json:"submission_id"`
+	Platform     string             `json:"platform"`
+	Views        int64              `json:"views"`
+	Likes        int64              `json:"likes"`
+	Comments     int64              `json:"comments"`
+	Shares       int64              `json:"shares"`
+	CapturedAt   pgtype.Timestamptz `json:"captured_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
 type SocialAccount struct {
 	ID               pgtype.UUID        `json:"id"`
 	UserID           string             `json:"user_id"`

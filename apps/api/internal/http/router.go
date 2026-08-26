@@ -88,6 +88,19 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	}
 	handlers.RegisterCampaignHandlers(api, campaignSvc)
 
+	// Internal routes (verifier API key auth, not Clerk JWT).
+	// These endpoints are for the external verifier service.
+	r.Group(func(r chi.Router) {
+		r.Use(auth.InternalAuthMiddleware(deps.Config.VerifierAPIKey))
+
+		api := humachi.New(r, humaConfig)
+
+		if deps.DB != nil {
+			verificationSvc := service.NewVerificationService(deps.DB.Queries)
+			handlers.RegisterInternalVerificationHandlers(api, verificationSvc)
+		}
+	})
+
 	// Authenticated routes live in this group, behind Clerk JWT verification
 	// and session loading. The middleware no-ops when CLERK_JWKS_URL is unset
 	// (development).
@@ -116,6 +129,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		if deps.DB != nil {
 			submissionSvc := service.NewSubmissionService(deps.DB.Queries)
 			handlers.RegisterSubmissionHandlers(api, submissionSvc)
+		}
+
+		// Verification status endpoint (behind auth middleware).
+		if deps.DB != nil {
+			verificationSvc := service.NewVerificationService(deps.DB.Queries)
+			handlers.RegisterVerificationStatusHandlers(api, verificationSvc)
 		}
 	})
 

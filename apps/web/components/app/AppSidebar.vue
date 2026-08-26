@@ -14,7 +14,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Overview', path: '/app', icon: LayoutDashboard },
-  { name: 'Campaigns', path: '/app/campaigns', icon: Megaphone, badge: 'SOON' },
+  { name: 'Campaigns', path: '/app/campaigns', icon: Megaphone },
   { name: 'Submissions', path: '/app/submissions', icon: Video, badge: 'SOON' },
   { name: 'Earnings', path: '/app/earnings', icon: Wallet, badge: 'SOON' },
   { name: 'Payouts', path: '/app/payouts', icon: CreditCard, badge: 'SOON' },

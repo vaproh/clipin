@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import type { Ref } from 'vue'
 
 export type UserRole = 'clipper' | 'owner'
 
@@ -9,6 +10,43 @@ export interface UserProfile {
   role: UserRole
   created_at: string
   updated_at: string
+}
+
+export interface Campaign {
+  id: string
+  owner_id: string
+  title: string
+  description: string | null
+  brief_url: string | null
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'multi'
+  status: 'draft' | 'funded' | 'active' | 'paused' | 'completed' | 'cancelled'
+  cpm_rate: number
+  total_budget: number
+  remaining_budget: number
+  platform_fee: number
+  max_clips_per_campaign: number | null
+  max_clips_per_clipper: number
+  min_views_per_clip: number
+  auto_approve_hours: number
+  starts_at: string | null
+  ends_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignListResponse {
+  campaigns: Campaign[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export interface CampaignFilters {
+  platform?: string
+  max_cpm?: number
+  min_budget?: number
+  page?: number
+  page_size?: number
 }
 
 /**
@@ -62,5 +100,44 @@ export function useSetRole() {
     onSuccess: (user) => {
       queryClient.setQueryData(['me'], user)
     },
+  })
+}
+
+/** Fetches a paginated list of campaigns with optional filters. */
+export function useCampaigns(filters: Ref<CampaignFilters>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['campaigns', filters],
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filters.value.platform) params.set('platform', filters.value.platform)
+      if (filters.value.max_cpm) params.set('max_cpm', String(filters.value.max_cpm))
+      if (filters.value.min_budget) params.set('min_budget', String(filters.value.min_budget))
+      params.set('page', String(filters.value.page ?? 1))
+      params.set('page_size', String(filters.value.page_size ?? 20))
+      return fetchApi<CampaignListResponse>(`/campaigns?${params.toString()}`)
+    },
+  })
+}
+
+/** Fetches a single campaign by ID. */
+export function useCampaign(id: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['campaign', id],
+    queryFn: () => fetchApi<Campaign>(`/campaigns/${id.value}`),
+    enabled: () => !!id.value,
+  })
+}
+
+/** Fetches campaigns owned by the authenticated user. */
+export function useMyCampaigns() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['campaigns', 'mine'],
+    queryFn: () => fetchApi<CampaignListResponse>('/campaigns/mine'),
   })
 }

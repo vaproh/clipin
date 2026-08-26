@@ -69,7 +69,7 @@ function relativeEndDate(endsAt: string | null): string {
         </div>
 
         <!-- Stats row -->
-        <div class="flex items-center gap-3 text-[11px] font-mono text-neutral-500">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono text-neutral-500">
           <span>CPM {{ formatPaise(campaign.cpm_rate) }}</span>
           <span class="text-neutral-800">|</span>
           <span>Min {{ campaign.min_views_per_clip.toLocaleString('en-IN') }} views</span>

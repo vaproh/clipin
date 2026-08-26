@@ -104,7 +104,7 @@ function formatTime(iso: string) {
         <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-500">UPI ID</span>
         <button
           v-if="hasUPI && !editingUPI"
-          class="text-[11px] font-mono text-neutral-500 hover:text-white transition-colors flex items-center gap-1"
+          class="text-[11px] font-mono text-neutral-500 hover:text-white transition-colors flex items-center gap-1 py-1"
           @click="startEditUPI"
         >
           <Pencil class="w-3 h-3" />
@@ -205,11 +205,11 @@ function formatTime(iso: string) {
             class="px-4 py-3 flex items-center justify-between gap-3"
           >
             <div class="space-y-0.5 min-w-0">
-              <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm font-mono font-semibold text-white">{{ formatPaise(payout.amount) }}</span>
                 <SharedStatusBadge :status="payout.status" />
               </div>
-              <div class="text-[11px] font-mono text-neutral-500">
+              <div class="text-[11px] font-mono text-neutral-500 truncate">
                 {{ payout.upi_id }} &middot; {{ formatDate(payout.created_at) }} {{ formatTime(payout.created_at) }}
               </div>
               <div v-if="payout.failure_reason" class="text-[11px] font-mono text-neutral-600">

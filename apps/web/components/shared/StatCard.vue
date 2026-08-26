@@ -15,7 +15,7 @@ defineProps<{
       <span class="text-[11px] font-mono uppercase tracking-wider text-neutral-500 truncate">{{ label }}</span>
       <component :is="icon" v-if="icon" class="w-4 h-4 text-neutral-500 shrink-0" />
     </div>
-    <div class="text-xl font-semibold tracking-tight text-white">{{ value }}</div>
+    <div class="text-xl font-semibold tracking-tight text-white truncate">{{ value }}</div>
     <p v-if="hint" class="text-[11px] font-mono text-neutral-500">{{ hint }}</p>
   </div>
 </template>

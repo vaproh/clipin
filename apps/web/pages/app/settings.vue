@@ -28,22 +28,22 @@ const role = computed(() => profile.value?.role)
       </div>
 
       <div class="space-y-2.5 text-xs font-mono">
-        <div class="flex items-center justify-between py-2 border-b border-neutral-900">
+        <div class="flex items-center justify-between min-w-0 py-2 border-b border-neutral-900">
           <span class="text-neutral-400">Name</span>
-          <span class="text-white">{{ displayName }}</span>
+          <span class="text-white text-right min-w-0 truncate ml-4">{{ displayName }}</span>
         </div>
-        <div class="flex items-center justify-between py-2 border-b border-neutral-900">
+        <div class="flex items-center justify-between min-w-0 py-2 border-b border-neutral-900">
           <span class="text-neutral-400">Email</span>
-          <span class="text-white">{{ email }}</span>
+          <span class="text-white text-right min-w-0 truncate ml-4">{{ email }}</span>
         </div>
         <div class="flex items-center justify-between py-2 border-b border-neutral-900">
           <span class="text-neutral-400">Role</span>
           <SharedStatusBadge v-if="role" :status="role" />
           <span v-else class="text-neutral-500">{{ isLoading ? 'Loading…' : 'Not set' }}</span>
         </div>
-        <div class="flex items-center justify-between py-2">
+        <div class="flex items-center justify-between min-w-0 py-2">
           <span class="text-neutral-400">Auth Identity</span>
-          <span class="text-white">Managed via Clerk</span>
+          <span class="text-white text-right min-w-0 truncate ml-4">Managed via Clerk</span>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ const role = computed(() => profile.value?.role)
           <p class="text-[11px] font-mono text-neutral-500">Choose whether you clip for campaigns or run your own.</p>
         </div>
         <NuxtLink to="/app/onboarding">
-          <UiButton variant="secondary" size="sm" class="gap-1">
+          <UiButton variant="secondary" size="sm" class="gap-1 shrink-0">
             Change role
             <ArrowRight class="w-3.5 h-3.5" />
           </UiButton>

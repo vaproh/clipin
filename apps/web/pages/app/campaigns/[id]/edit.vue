@@ -219,7 +219,7 @@ function save() {
         </div>
 
         <!-- Rules -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="space-y-1.5">
             <UiLabel for="min_views" class="text-xs font-mono text-neutral-400">Min views per clip</UiLabel>
             <UiInput

@@ -35,7 +35,7 @@ function clearFilters() {
   <div class="flex flex-wrap items-center gap-3">
     <!-- Platform -->
     <UiSelect v-model="platformValue">
-      <UiSelectTrigger class="w-40">
+      <UiSelectTrigger class="w-full sm:w-40">
         <UiSelectValue placeholder="All platforms" />
       </UiSelectTrigger>
       <UiSelectContent>

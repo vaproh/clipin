@@ -249,7 +249,7 @@ function relativeDate(dateStr: string | null): string {
       </template>
 
       <!-- Actions -->
-      <div class="flex items-center gap-2 pt-2">
+      <div class="flex flex-wrap items-center gap-2 pt-2">
         <UiButton v-if="canSubmit" size="sm" class="gap-1.5">
           <Send class="w-3.5 h-3.5" />
           Submit a clip
@@ -316,7 +316,7 @@ function relativeDate(dateStr: string | null): string {
         <!-- Aggregate verification stats -->
         <div
           v-if="verificationAggregate && verificationAggregate.tracked_count > 0"
-          class="rounded bg-neutral-950 border border-neutral-800 p-4 flex items-center gap-4"
+          class="rounded bg-neutral-950 border border-neutral-800 p-4 flex flex-wrap items-center gap-3 md:gap-4"
         >
           <div class="flex items-center gap-1.5 text-xs font-mono text-neutral-400">
             <BarChart3 class="w-3.5 h-3.5" />

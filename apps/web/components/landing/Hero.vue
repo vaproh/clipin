@@ -51,7 +51,7 @@ const mockCampaigns = [
         </p>
 
         <!-- Aligned Action Buttons -->
-        <div class="flex items-center gap-3 pt-1">
+        <div class="flex flex-wrap items-center gap-3 pt-1">
           <NuxtLink
             to="/sign-up"
             class="h-10 px-5 inline-flex items-center justify-center rounded bg-white text-black text-xs font-medium hover:bg-neutral-200 transition-colors gap-2"

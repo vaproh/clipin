@@ -2,15 +2,17 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port        string
-	Env         string
-	DatabaseURL string
-	RedisURL    string
+	Port           string
+	Env            string
+	DatabaseURL    string
+	RedisURL       string
+	AllowedOrigins []string
 }
 
 func Load() (*Config, error) {
@@ -18,13 +20,25 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:        getEnv("PORT", "8080"),
-		Env:         getEnv("ENV", "development"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://clipin:clipin_dev_pass@localhost:5433/clipin_dev?sslmode=disable"),
-		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6380/0"),
+		Port:           getEnv("PORT", "8080"),
+		Env:            getEnv("ENV", "development"),
+		DatabaseURL:    getEnv("DATABASE_URL", "postgres://clipin:clipin_dev_pass@localhost:5433/clipin_dev?sslmode=disable"),
+		RedisURL:       getEnv("REDIS_URL", "redis://localhost:6380/0"),
+		AllowedOrigins: parseCSV(getEnv("ALLOWED_ORIGINS", "http://localhost:3000")),
 	}
 
 	return cfg, nil
+}
+
+// parseCSV splits a comma-separated env value into a trimmed, non-empty list.
+func parseCSV(raw string) []string {
+	var items []string
+	for _, item := range strings.Split(raw, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }
 
 func getEnv(key, fallback string) string {

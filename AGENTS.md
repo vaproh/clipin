@@ -262,3 +262,57 @@ Before marking work complete:
 8. Financial operations are auditable where relevant.
 9. No secrets are committed.
 10. Documentation is updated when needed.
+11. Playwright visual QA passes on new screens (desktop + mobile widths, all three component states: loading / empty / error).
+
+## Key Decisions
+
+### Marketplace archetype
+
+Open self-serve marketplace. No clipper application or vetting gate. Anyone can sign up, browse campaigns, and submit clips. Verification and fraud controls are the quality moat — not curation.
+
+### Campaign mechanics (research-backed)
+
+- Escrow-funded pools: campaigns only go live after deposit. No unfunded campaigns.
+- Rate per 1,000 views (CPM), set by campaign owner.
+- Remaining budget publicly visible on listings and detail pages.
+- Auto-approve-after-N-hours for submissions (default 48h, owner-configurable).
+- Per-clip and per-clipper payout caps enforced in rules.
+- Minimum view floor per clip enforced in rules.
+- Unspent budget refunded to campaign owner on campaign end.
+
+### Platform fee
+
+10% flat on campaign deposits. Charged at deposit time. One constant, swappable later.
+
+### Verification boundary
+
+The `services/verifier` is owned and operated externally. It writes metric snapshots to a shared `metric_snapshots` table. The main backend reads snapshots and computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract.
+
+### Payouts
+
+Razorpay stubbed behind a `PayoutProvider` interface until the account is available. Webhook endpoint built, signature-checked, disabled until keys exist.
+
+### UI approach
+
+shadcn-vue installed just-in-time per milestone. Shared primitives (PageHeader, StatCard, StatusBadge, Money formatter, DataTable, EmptyState) built as each page needs them. Design system tokens already exist in `tailwind.config.js` + `main.css`. Playwright browser testing on every new screen.
+
+### Deployment
+
+Excluded from current scope. Planned separately when production VPS / Cloudflare infrastructure exists.
+
+## Execution Order
+
+Sequential by milestone. Within each: tests first (TDD), small conventional commits, migrations clean, builds green, Playwright visual QA before moving on.
+
+| Milestone | Scope |
+|---|---|
+| M0 | Foundation: migrations, sqlc, Clerk JWT, CI, CORS, docs |
+| M1 | Users, roles, onboarding, first shared UI primitives |
+| M2 | Campaign marketplace: schema, listing, filters, detail |
+| M3 | Campaign creation wizard + owner dashboard |
+| M4 | Submissions: lifecycle, review, dedupe |
+| M5 | Verification contract: snapshot table, deltas, status |
+| M6 | Financial ledger: append-only, eligible views, fee, caps |
+| M7 | Payouts: UPI, stubbed provider, webhook endpoint |
+| M8 | Admin controls, fraud flags, audit logs |
+| M9 | Launch polish: SEO, notifications, perf |

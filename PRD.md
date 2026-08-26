@@ -322,82 +322,99 @@ Do not build:
 
 ## 15. Phased Development
 
-### Phase 1 — Foundation + Landing + Auth
+### M0 — Foundation (completes Phase 1)
 
-- repository setup
-- frontend scaffold
-- backend scaffold
-- PostgreSQL/Redis
-- landing page
-- auth-provider integration
+- Migration runner (`golang-migrate`) + baseline schema
+- sqlc code generation pipeline
+- Clerk JWT verification middleware (JWKS) + frontend token flow
+- CORS restricted via env allowlist
+- GitHub Actions CI (Go test/lint/build, Nuxt typecheck/build)
+- Delete stray root `layouts/app.vue`
+- `docs/architecture.md`
 
-### Phase 2 — User Onboarding
+### M1 — Users & Roles
 
-- role selection
-- profiles
-- social account records
-- authorization
+- Schema: `users` (clerk_id), `profiles`, roles, `social_accounts`
+- Endpoints: `GET/PUT /me`, role selection, social-account CRUD
+- Authorization layer (clipper / owner / admin)
+- Onboarding UI (role selection after sign-up)
+- First TanStack Query composables + Zod schemas
+- Install shadcn-vue; build shared patterns as needed (PageHeader, StatCard, StatusBadge, Money formatter)
 
-### Phase 3 — Campaign Marketplace
+### M2 — Campaign Marketplace
 
-- campaign listing
-- filters
-- campaign detail page
-- campaign lifecycle
-- caching
+- Campaign state machine: `draft → pending_approval → funded → live → ended/cancelled`
+- Schema carries: `reward_pool` (escrowed), `rate_per_1k`, `remaining_budget` (publicly visible)
+- Rules struct: allowed platforms, required tags/watermark/disclosure text, min/max duration, min view floor per clip, max payout per clip, max payout per clipper
+- Brief + rejection criteria, source content links
+- Public list/detail endpoints (live campaigns only), Redis cache
+- Marketplace listing + filters + detail page
 
-### Phase 4 — Campaign Creation
+### M3 — Campaign Creation + Owner Dashboard
 
-- campaign creation
-- CPM/budget/rules
-- campaign owner dashboard
-- approval workflow
+- Creation wizard (all rules fields + deposit step — stub payment, ledger records escrow)
+- Admin approval workflow (approve / reject campaign)
+- Owner dashboard: submissions table, spend vs pool, remaining budget
 
-### Phase 5 — Clip Submissions
+### M4 — Submissions
 
-- submission flow
-- submission history
-- moderation
-- duplicate detection
+- Submission lifecycle: `submitted → pending_review → approved/rejected → earning → settled`
+- Unique `(campaign_id, post_url)` constraint + cross-campaign same-URL dedupe
+- Rate limits on submission creation
+- Owner review with configurable auto-approve-after-N-hours (default 48h)
+- Clipper submit UI + submission history
 
-### Phase 6 — Verification
+### M5 — Verification Contract
 
-- verification service
-- background jobs
-- metric snapshots
-- verification status
+- `metric_snapshots` table (submission_id FK, views/likes/comments/shares, captured_at, append-only)
+- Submission state machine extended for verification transitions
+- Growth deltas + engagement-ratio + eligible-views math computed by main backend
+- `docs/verification-contract.md` defining the snapshot write contract
+- Verification status surfaced in clipper and owner UIs
+- The `services/verifier` is owned and operated externally — writes snapshots to this table; no Redis stream or stubbed fetcher needed from the main backend
 
-### Phase 7 — Earnings / Ledger
+### M6 — Earnings / Ledger
 
-- eligible views
-- earnings calculations
-- financial ledger
-- campaign budget accounting
+- Append-only `ledger_entries`; balances always derived, never mutated
+- Eligible-view calculation: new verified views × campaign rate, floor/caps enforcement, hard-capped by remaining pool
+- Platform fee (10% on deposits) recorded as separate ledger entries
+- Unspent-budget refund entries on campaign end
+- Idempotency keys on every entry
+- TDD mandatory: arithmetic, caps, concurrency, budget exhaustion edge cases
 
-### Phase 8 — Payouts
+### M7 — Payouts
 
-- UPI details
-- withdrawal flow
-- Razorpay integration
-- webhooks
-- reconciliation
+- UPI details storage, withdrawal requests, ₹500 minimum threshold
+- Weekly batch payout cycle (default cadence)
+- `PayoutProvider` interface + stub implementation (records intent/completion in ledger)
+- Razorpay client drops in behind the same interface when keys are available
+- Webhook endpoint built (signature-checked, disabled until Razorpay keys exist)
+- Reconciliation job skeleton
 
-### Phase 9 — Abuse / Operations
+### M8 — Admin & Fraud
 
-- fraud rules
-- admin controls
-- audit logs
-- operational tooling
+- Admin UI: campaign approval queue, submission moderation, payout review, user management, audit-log viewer
+- Audit log written at every financial/state transition
+- Fraud controls: engagement-ratio anomaly flags, duplicate-URL detection, suspicious-growth flags
+- Turnstile on sensitive forms, Redis rate limits
 
-### Phase 10 — Launch Polish
+### M9 — Launch Polish
 
-- SEO
-- notifications
-- performance
-- onboarding improvements
-- campaign discovery improvements
+- SEO / meta tags, notifications (in-app + email)
+- Onboarding refinement, performance improvements
+- Dual-pay marketing line for clippers (keep own platform monetization + campaign payout)
+- Deployment planned separately when production infra exists
 
-## 16. Success Criteria for Early Launch
+Execution order is strictly sequential. Within each milestone: tests first, small conventional commits, migrations clean, builds green. Playwright visual QA on every new screen before the milestone closes.
+
+## 16. Platform Fee Model
+
+- Flat percentage on campaign deposits: **10%**
+- Charged at deposit time (escrow funds include the fee)
+- One number, both sides see it transparently
+- Swappable as a single constant if the rate needs to change later
+
+## 17. Success Criteria for Early Launch
 
 The product should aim to reach:
 
@@ -412,7 +429,7 @@ All traction metrics must come from real platform activity.
 
 No fabricated campaign numbers, users, earnings, testimonials, or social proof.
 
-## 17. Core Product Principle
+## 18. Core Product Principle
 
 ClipIN should compete on **actual marketplace liquidity and trust**, not on inflated landing-page numbers.
 

@@ -1,0 +1,28 @@
+name: Web CI
+on:
+  push:
+    paths: ['apps/web/**']
+  pull_request:
+    paths: ['apps/web/**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: apps/web
+      - name: Type check
+        run: npx nuxi typecheck
+        working-directory: apps/web
+        continue-on-error: true
+      - name: Build
+        run: npx nuxi build
+        working-directory: apps/web
+        env:
+          NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
+          NUXT_CLERK_SECRET_KEY: sk_test_placeholder

@@ -1,0 +1,35 @@
+name: API CI
+on:
+  push:
+    paths: ['apps/api/**', 'go.work', 'go.work.sum']
+  pull_request:
+    paths: ['apps/api/**', 'go.work', 'go.work.sum']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: clipin
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: clipin_test
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://clipin:test_pass@localhost:5432/clipin_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Run migrations
+        run: go run ./cmd/migrate up
+        working-directory: apps/api
+      - name: Run tests
+        run: go test -race -count=1 ./...
+        working-directory: apps/api
+      - name: Build
+        run: go build ./...
+        working-directory: apps/api

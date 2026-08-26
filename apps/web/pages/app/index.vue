@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Clock, ShieldCheck } from 'lucide-vue-next'
+import { Megaphone, Scissors, Wallet, ArrowRight } from 'lucide-vue-next'
 
 definePageMeta({
   layout: 'app',
@@ -7,15 +7,20 @@ definePageMeta({
 })
 
 const { user } = useUser()
+const { data: profile, isLoading } = useUserQuery()
+
+const roleLabel = computed(() => {
+  if (profile.value) return profile.value.role
+  return null
+})
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Welcome Greeting Card -->
-    <div class="p-6 rounded bg-neutral-950 border border-neutral-800 space-y-2 relative overflow-hidden">
+    <div class="rounded bg-neutral-950 border border-neutral-800 p-6 space-y-2 relative overflow-hidden">
       <div class="flex items-center gap-2">
         <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-        <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">Authenticated Session</span>
+        <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">Workspace</span>
       </div>
 
       <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-white">
@@ -27,23 +32,23 @@ const { user } = useUser()
       </p>
     </div>
 
-    <!-- Marketplace Preparation Placeholder Card -->
-    <div class="p-8 rounded bg-neutral-950 border border-neutral-800 text-center py-12 space-y-3">
-      <div class="w-10 h-10 rounded bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto text-white">
-        <Clock class="w-5 h-5 text-neutral-300" />
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <SharedStatCard label="Role" :value="isLoading ? '—' : (roleLabel ?? 'not set')" :icon="Scissors" />
+      <SharedStatCard label="Active campaigns" value="0" :icon="Megaphone" />
+      <SharedStatCard label="Earnings" value="—" :icon="Wallet" hint="Ledger opens when views are verified" />
+    </div>
 
-      <div class="space-y-1.5 max-w-md mx-auto">
-        <h3 class="text-sm font-semibold text-white">The marketplace is being prepared.</h3>
-        <p class="text-xs text-neutral-400 leading-relaxed font-normal">
-          Campaign creation, clip submissions, performance metrics verification, and INR payouts will open in upcoming release phases.
-        </p>
+    <div v-if="!roleLabel && !isLoading" class="rounded bg-neutral-950 border border-neutral-800 p-5 flex items-center justify-between gap-4">
+      <div class="space-y-0.5">
+        <div class="text-sm font-semibold text-white">Choose your role</div>
+        <p class="text-xs text-neutral-400">Pick how you want to use ClipIN: clip for campaigns or run your own.</p>
       </div>
-
-      <div class="pt-2 inline-flex items-center gap-2 px-3 py-1 rounded bg-neutral-900 border border-neutral-800 text-xs font-mono text-neutral-300">
-        <ShieldCheck class="w-3.5 h-3.5 text-white" />
-        Account verified via Clerk
-      </div>
+      <NuxtLink to="/app/onboarding" class="shrink-0">
+        <UiButton size="sm" class="gap-1.5">
+          Get started
+          <ArrowRight class="w-3.5 h-3.5" />
+        </UiButton>
+      </NuxtLink>
     </div>
   </div>
 </template>

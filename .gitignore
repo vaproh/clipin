@@ -43,3 +43,6 @@ redis_data/
 *.log
 coverage/
 *.coverprofile
+
+# Playwright MCP artifacts
+.playwright-mcp/

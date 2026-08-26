@@ -2,6 +2,7 @@
 import { UserButton } from '@clerk/vue'
 
 const { user } = useUser()
+const { data: profile } = useUserQuery()
 </script>
 
 <template>
@@ -13,6 +14,7 @@ const { user } = useUser()
     </div>
 
     <div class="flex items-center gap-3">
+      <SharedStatusBadge v-if="profile?.role" :status="profile.role" />
       <div v-if="user" class="text-right hidden sm:block">
         <div class="text-xs font-medium text-white">{{ user.fullName || user.firstName || 'Clipper' }}</div>
         <div class="text-[10px] font-mono text-neutral-400">{{ user.primaryEmailAddress?.emailAddress }}</div>

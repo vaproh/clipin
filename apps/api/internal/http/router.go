@@ -10,6 +10,7 @@ import (
 	"clipin/apps/api/internal/config"
 	"clipin/apps/api/internal/db"
 	"clipin/apps/api/internal/http/handlers"
+	"clipin/apps/api/internal/payout"
 	"clipin/apps/api/internal/redis"
 	"clipin/apps/api/internal/service"
 
@@ -80,6 +81,9 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	// Handlers (public: /health, /openapi.json, /docs stay on the root router)
 	handlers.RegisterHealthHandler(api, deps, deps.Config.Env)
 
+	// Webhook handlers (public, no auth).
+	handlers.RegisterWebhookHandlers(api)
+
 	// Campaign marketplace service (public endpoints)
 	var campaignSvc *service.CampaignService
 	if deps.DB != nil {
@@ -146,6 +150,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		if deps.DB != nil {
 			ledgerSvc := service.NewLedgerService(deps.DB.Queries)
 			handlers.RegisterLedgerHandlers(api, ledgerSvc)
+		}
+
+		// Payout endpoints (behind auth middleware).
+		if deps.DB != nil {
+			payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
+			handlers.RegisterPayoutHandlers(api, payoutSvc)
 		}
 	})
 

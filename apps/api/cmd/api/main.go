@@ -14,6 +14,7 @@ import (
 	"clipin/apps/api/internal/config"
 	"clipin/apps/api/internal/db"
 	apphttp "clipin/apps/api/internal/http"
+	"clipin/apps/api/internal/payout"
 	"clipin/apps/api/internal/redis"
 	"clipin/apps/api/internal/service"
 	"clipin/apps/api/internal/worker"
@@ -54,6 +55,10 @@ func main() {
 		defer workerCancel()
 		submissionSvc := service.NewSubmissionService(database.Queries)
 		worker.StartAutoApproveWorker(workerCtx, submissionSvc, 5*time.Minute)
+
+		// Start payout processor worker with graceful shutdown.
+		payoutSvc := service.NewPayoutService(database.Queries, &payout.RazorpayStub{})
+		worker.StartPayoutProcessorWorker(workerCtx, payoutSvc, 10*time.Minute)
 	}
 
 	// Scaffolding Redis connection

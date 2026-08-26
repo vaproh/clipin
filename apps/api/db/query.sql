@@ -209,3 +209,35 @@ WHERE campaign_id = $1 AND entry_type = 'platform_fee';
 -- name: SumSpendByCampaign :one
 SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
 WHERE campaign_id = $1 AND entry_type = 'earning';
+
+-- Payout queries
+
+-- name: UpdateUserUPI :one
+UPDATE users SET upi_id = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
+
+-- name: CreatePayoutRequest :one
+INSERT INTO payout_requests (id, clipper_id, amount, upi_id, idempotency_key)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (idempotency_key) DO NOTHING
+RETURNING *;
+
+-- name: GetPayoutRequestByID :one
+SELECT * FROM payout_requests WHERE id = $1;
+
+-- name: ListPayoutRequestsByClipper :many
+SELECT * FROM payout_requests WHERE clipper_id = $1 ORDER BY created_at DESC;
+
+-- name: UpdatePayoutRequestStatus :one
+UPDATE payout_requests
+SET status = $2, provider_ref = $3, failure_reason = $4,
+    processed_at = CASE WHEN $2 IN ('completed', 'failed') THEN NOW() ELSE processed_at END,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: SumPendingPayoutsByClipper :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM payout_requests
+WHERE clipper_id = $1 AND status IN ('pending', 'processing');
+
+-- name: ListPendingPayoutRequests :many
+SELECT * FROM payout_requests WHERE status = 'pending' ORDER BY created_at ASC;

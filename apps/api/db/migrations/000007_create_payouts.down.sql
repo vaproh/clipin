@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS payout_requests;
+ALTER TABLE users DROP COLUMN IF EXISTS upi_id;

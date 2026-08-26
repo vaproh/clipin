@@ -241,6 +241,46 @@ func (q *Queries) CreateMetricSnapshot(ctx context.Context, arg CreateMetricSnap
 	return i, err
 }
 
+const createPayoutRequest = `-- name: CreatePayoutRequest :one
+INSERT INTO payout_requests (id, clipper_id, amount, upi_id, idempotency_key)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (idempotency_key) DO NOTHING
+RETURNING id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at
+`
+
+type CreatePayoutRequestParams struct {
+	ID             pgtype.UUID `json:"id"`
+	ClipperID      string      `json:"clipper_id"`
+	Amount         int32       `json:"amount"`
+	UpiID          string      `json:"upi_id"`
+	IdempotencyKey string      `json:"idempotency_key"`
+}
+
+func (q *Queries) CreatePayoutRequest(ctx context.Context, arg CreatePayoutRequestParams) (PayoutRequest, error) {
+	row := q.db.QueryRow(ctx, createPayoutRequest,
+		arg.ID,
+		arg.ClipperID,
+		arg.Amount,
+		arg.UpiID,
+		arg.IdempotencyKey,
+	)
+	var i PayoutRequest
+	err := row.Scan(
+		&i.ID,
+		&i.ClipperID,
+		&i.Amount,
+		&i.UpiID,
+		&i.Status,
+		&i.ProviderRef,
+		&i.FailureReason,
+		&i.IdempotencyKey,
+		&i.CreatedAt,
+		&i.ProcessedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createSocialAccount = `-- name: CreateSocialAccount :one
 INSERT INTO social_accounts (user_id, platform, platform_user_id, platform_username, access_token, refresh_token, token_expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -328,7 +368,7 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, display_name, role)
 VALUES ($1, $2, $3, $4)
-RETURNING id, email, display_name, role, created_at, updated_at
+RETURNING id, email, display_name, role, created_at, updated_at, upi_id
 `
 
 type CreateUserParams struct {
@@ -353,6 +393,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UpiID,
 	)
 	return i, err
 }
@@ -469,6 +510,29 @@ func (q *Queries) GetLedgerEntryByIdempotencyKey(ctx context.Context, idempotenc
 		&i.Description,
 		&i.Metadata,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getPayoutRequestByID = `-- name: GetPayoutRequestByID :one
+SELECT id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at FROM payout_requests WHERE id = $1
+`
+
+func (q *Queries) GetPayoutRequestByID(ctx context.Context, id pgtype.UUID) (PayoutRequest, error) {
+	row := q.db.QueryRow(ctx, getPayoutRequestByID, id)
+	var i PayoutRequest
+	err := row.Scan(
+		&i.ID,
+		&i.ClipperID,
+		&i.Amount,
+		&i.UpiID,
+		&i.Status,
+		&i.ProviderRef,
+		&i.FailureReason,
+		&i.IdempotencyKey,
+		&i.CreatedAt,
+		&i.ProcessedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -612,7 +676,7 @@ func (q *Queries) GetSubmissionsNeedingVerification(ctx context.Context, limit i
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, display_name, role, created_at, updated_at FROM users WHERE email = $1
+SELECT id, email, display_name, role, created_at, updated_at, upi_id FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -625,12 +689,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UpiID,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, display_name, role, created_at, updated_at FROM users WHERE id = $1
+SELECT id, email, display_name, role, created_at, updated_at, upi_id FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -643,6 +708,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UpiID,
 	)
 	return i, err
 }
@@ -867,6 +933,78 @@ func (q *Queries) ListLedgerEntriesByClipper(ctx context.Context, clipperID pgty
 			&i.Description,
 			&i.Metadata,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPayoutRequestsByClipper = `-- name: ListPayoutRequestsByClipper :many
+SELECT id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at FROM payout_requests WHERE clipper_id = $1 ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPayoutRequestsByClipper(ctx context.Context, clipperID string) ([]PayoutRequest, error) {
+	rows, err := q.db.Query(ctx, listPayoutRequestsByClipper, clipperID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PayoutRequest
+	for rows.Next() {
+		var i PayoutRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClipperID,
+			&i.Amount,
+			&i.UpiID,
+			&i.Status,
+			&i.ProviderRef,
+			&i.FailureReason,
+			&i.IdempotencyKey,
+			&i.CreatedAt,
+			&i.ProcessedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingPayoutRequests = `-- name: ListPendingPayoutRequests :many
+SELECT id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at FROM payout_requests WHERE status = 'pending' ORDER BY created_at ASC
+`
+
+func (q *Queries) ListPendingPayoutRequests(ctx context.Context) ([]PayoutRequest, error) {
+	rows, err := q.db.Query(ctx, listPendingPayoutRequests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PayoutRequest
+	for rows.Next() {
+		var i PayoutRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClipperID,
+			&i.Amount,
+			&i.UpiID,
+			&i.Status,
+			&i.ProviderRef,
+			&i.FailureReason,
+			&i.IdempotencyKey,
+			&i.CreatedAt,
+			&i.ProcessedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1131,6 +1269,18 @@ func (q *Queries) SumFeesByCampaign(ctx context.Context, campaignID pgtype.UUID)
 	return total, err
 }
 
+const sumPendingPayoutsByClipper = `-- name: SumPendingPayoutsByClipper :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM payout_requests
+WHERE clipper_id = $1 AND status IN ('pending', 'processing')
+`
+
+func (q *Queries) SumPendingPayoutsByClipper(ctx context.Context, clipperID string) (int64, error) {
+	row := q.db.QueryRow(ctx, sumPendingPayoutsByClipper, clipperID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const sumSpendByCampaign = `-- name: SumSpendByCampaign :one
 SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
 WHERE campaign_id = $1 AND entry_type = 'earning'
@@ -1223,6 +1373,46 @@ func (q *Queries) UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignSt
 	return i, err
 }
 
+const updatePayoutRequestStatus = `-- name: UpdatePayoutRequestStatus :one
+UPDATE payout_requests
+SET status = $2, provider_ref = $3, failure_reason = $4,
+    processed_at = CASE WHEN $2 IN ('completed', 'failed') THEN NOW() ELSE processed_at END,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at
+`
+
+type UpdatePayoutRequestStatusParams struct {
+	ID            pgtype.UUID `json:"id"`
+	Status        string      `json:"status"`
+	ProviderRef   pgtype.Text `json:"provider_ref"`
+	FailureReason pgtype.Text `json:"failure_reason"`
+}
+
+func (q *Queries) UpdatePayoutRequestStatus(ctx context.Context, arg UpdatePayoutRequestStatusParams) (PayoutRequest, error) {
+	row := q.db.QueryRow(ctx, updatePayoutRequestStatus,
+		arg.ID,
+		arg.Status,
+		arg.ProviderRef,
+		arg.FailureReason,
+	)
+	var i PayoutRequest
+	err := row.Scan(
+		&i.ID,
+		&i.ClipperID,
+		&i.Amount,
+		&i.UpiID,
+		&i.Status,
+		&i.ProviderRef,
+		&i.FailureReason,
+		&i.IdempotencyKey,
+		&i.CreatedAt,
+		&i.ProcessedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateSubmissionStatus = `-- name: UpdateSubmissionStatus :one
 UPDATE submissions
 SET status = $2,
@@ -1266,7 +1456,7 @@ SET display_name = COALESCE($2, display_name),
     email = COALESCE($3, email),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, display_name, role, created_at, updated_at
+RETURNING id, email, display_name, role, created_at, updated_at, upi_id
 `
 
 type UpdateUserParams struct {
@@ -1285,6 +1475,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UpiID,
 	)
 	return i, err
 }
@@ -1293,7 +1484,7 @@ const updateUserRole = `-- name: UpdateUserRole :one
 UPDATE users
 SET role = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, display_name, role, created_at, updated_at
+RETURNING id, email, display_name, role, created_at, updated_at, upi_id
 `
 
 type UpdateUserRoleParams struct {
@@ -1311,6 +1502,33 @@ func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) 
 		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UpiID,
+	)
+	return i, err
+}
+
+const updateUserUPI = `-- name: UpdateUserUPI :one
+
+UPDATE users SET upi_id = $2, updated_at = NOW() WHERE id = $1 RETURNING id, email, display_name, role, created_at, updated_at, upi_id
+`
+
+type UpdateUserUPIParams struct {
+	ID    string      `json:"id"`
+	UpiID pgtype.Text `json:"upi_id"`
+}
+
+// Payout queries
+func (q *Queries) UpdateUserUPI(ctx context.Context, arg UpdateUserUPIParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserUPI, arg.ID, arg.UpiID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.DisplayName,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UpiID,
 	)
 	return i, err
 }

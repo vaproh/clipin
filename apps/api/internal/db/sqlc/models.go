@@ -56,6 +56,20 @@ type MetricSnapshot struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
+type PayoutRequest struct {
+	ID             pgtype.UUID        `json:"id"`
+	ClipperID      string             `json:"clipper_id"`
+	Amount         int32              `json:"amount"`
+	UpiID          string             `json:"upi_id"`
+	Status         string             `json:"status"`
+	ProviderRef    pgtype.Text        `json:"provider_ref"`
+	FailureReason  pgtype.Text        `json:"failure_reason"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ProcessedAt    pgtype.Timestamptz `json:"processed_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type SocialAccount struct {
 	ID               pgtype.UUID        `json:"id"`
 	UserID           string             `json:"user_id"`
@@ -91,4 +105,5 @@ type User struct {
 	Role        string             `json:"role"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	UpiID       pgtype.Text        `json:"upi_id"`
 }

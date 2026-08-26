@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle } from 'lucide-vue-next'
+import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle, BarChart3 } from 'lucide-vue-next'
 import { formatPaise } from '~/lib/utils'
 
 definePageMeta({
@@ -51,6 +51,10 @@ const mySubmissionCount = computed(() => {
 const { data: campaignSubmissionsData } = useCampaignSubmissions(id)
 const campaignSubmissions = computed(() => campaignSubmissionsData.value?.submissions ?? [])
 const pendingCount = computed(() => campaignSubmissions.value.filter((s) => s.status === 'pending').length)
+
+// Verification aggregates for displayed submissions
+const displayedSubmissionIds = computed(() => campaignSubmissions.value.slice(0, 5).map((s) => s.id))
+const { data: verificationAggregate } = useAggregateVerification(displayedSubmissionIds)
 
 // Reject dialog state
 const rejectTarget = ref<string | null>(null)
@@ -272,12 +276,29 @@ function relativeDate(dateStr: string | null): string {
             View all
           </NuxtLink>
         </div>
+
+        <!-- Aggregate verification stats -->
+        <div
+          v-if="verificationAggregate && verificationAggregate.tracked_count > 0"
+          class="rounded bg-neutral-950 border border-neutral-800 p-4 flex items-center gap-4"
+        >
+          <div class="flex items-center gap-1.5 text-xs font-mono text-neutral-400">
+            <BarChart3 class="w-3.5 h-3.5" />
+            <span>{{ verificationAggregate.total_current_views.toLocaleString('en-IN') }} total views tracked</span>
+          </div>
+          <div v-if="verificationAggregate.verified_count > 0" class="flex items-center gap-1.5 text-xs font-mono text-emerald-400">
+            <Eye class="w-3.5 h-3.5" />
+            <span>{{ verificationAggregate.total_eligible_views.toLocaleString('en-IN') }} eligible views ({{ verificationAggregate.verified_count }} verified)</span>
+          </div>
+        </div>
+
         <div class="space-y-3">
           <SubmissionSubmissionCard
             v-for="sub in campaignSubmissions.slice(0, 5)"
             :key="sub.id"
             :submission="sub"
             show-actions
+            show-verification
             @approve="handleApprove"
             @reject="handleRejectRequest"
           />

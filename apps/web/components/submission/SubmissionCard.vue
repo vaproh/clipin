@@ -5,12 +5,21 @@ import type { Submission } from '~/composables/useApi'
 const props = defineProps<{
   submission: Submission
   showActions?: boolean
+  showVerification?: boolean
 }>()
 
 const emit = defineEmits<{
   approve: [id: string]
   reject: [id: string]
 }>()
+
+const submissionId = toRef(props.submission, 'id')
+const isApproved = computed(() =>
+  props.submission.status === 'approved' || props.submission.status === 'auto_approved'
+)
+const { data: verificationStatus } = useVerificationStatus(
+  computed(() => isApproved.value && props.showVerification ? props.submission.id : '')
+)
 
 const platformLabel: Record<string, string> = {
   youtube: 'YouTube',
@@ -46,6 +55,10 @@ function truncateUrl(url: string, max = 50): string {
           </span>
           <SharedStatusBadge :status="submission.status" />
         </div>
+        <SubmissionVerificationBadge
+          v-if="showVerification && isApproved && verificationStatus"
+          :status="verificationStatus"
+        />
         <a
           :href="submission.post_url"
           target="_blank"

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
 
 export type UserRole = 'clipper' | 'owner'
@@ -234,6 +234,67 @@ export function useResumeCampaign(id: Ref<string>) {
 
 export function useCancelCampaign(id: Ref<string>) {
   return useCampaignAction(id, 'cancel')
+}
+
+// ---------------------------------------------------------------------------
+// Verification
+// ---------------------------------------------------------------------------
+
+export interface VerificationStatus {
+  has_snapshots: boolean
+  current_views: number
+  eligible_views: number
+  snapshot_count: number
+  last_snapshot_at: string | null
+}
+
+/** Fetch verification status for a single submission. */
+export function useVerificationStatus(submissionId: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['verification', submissionId],
+    queryFn: () => fetchApi<VerificationStatus>(`/submissions/${submissionId.value}/verification`),
+    enabled: () => !!submissionId.value,
+    staleTime: 30_000,
+  })
+}
+
+export interface AggregateVerification {
+  total_eligible_views: number
+  total_current_views: number
+  verified_count: number
+  tracked_count: number
+}
+
+/** Fetch verification for multiple submissions and compute aggregates. */
+export function useAggregateVerification(submissionIds: Ref<string[]>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['verification', 'aggregate', submissionIds],
+    queryFn: async (): Promise<AggregateVerification> => {
+      const ids = submissionIds.value
+      if (ids.length === 0) return { total_eligible_views: 0, total_current_views: 0, verified_count: 0, tracked_count: 0 }
+
+      const results = await Promise.all(
+        ids.map((id) => fetchApi<VerificationStatus>(`/submissions/${id}/verification`))
+      )
+
+      return results.reduce(
+        (acc, r) => {
+          acc.total_eligible_views += r.eligible_views
+          acc.total_current_views += r.current_views
+          if (r.eligible_views > 0) acc.verified_count++
+          if (r.has_snapshots) acc.tracked_count++
+          return acc
+        },
+        { total_eligible_views: 0, total_current_views: 0, verified_count: 0, tracked_count: 0 }
+      )
+    },
+    enabled: () => submissionIds.value.length > 0,
+    staleTime: 30_000,
+  })
 }
 
 // ---------------------------------------------------------------------------

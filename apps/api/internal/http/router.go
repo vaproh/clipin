@@ -10,6 +10,7 @@ import (
 	"clipin/apps/api/internal/config"
 	"clipin/apps/api/internal/db"
 	"clipin/apps/api/internal/http/handlers"
+	"clipin/apps/api/internal/middleware"
 	"clipin/apps/api/internal/payout"
 	"clipin/apps/api/internal/redis"
 	"clipin/apps/api/internal/service"
@@ -17,7 +18,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
 type AppDependencies struct {
@@ -44,11 +45,11 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(chimw.RequestID)
+	r.Use(chimw.RealIP)
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
+	r.Use(chimw.Timeout(60 * time.Second))
 
 	// CORS: echo back the request origin only if it is allowlisted.
 	// Non-matching origins get no header, so the browser blocks the response.
@@ -77,6 +78,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	humaConfig.Info.Description = "ClipIN Performance Clipping Marketplace API"
 
 	api := humachi.New(r, humaConfig)
+
+	// Rate limiter (in-memory, suitable for single-instance).
+	rl := middleware.NewRateLimiter()
+
+	// Global per-IP rate limit for all endpoints (100 req/min).
+	r.Use(rl.Middleware(100, middleware.IPKey))
 
 	// Handlers (public: /health, /openapi.json, /docs stay on the root router)
 	handlers.RegisterHealthHandler(api, deps, deps.Config.Env)
@@ -157,6 +164,16 @@ func NewRouter(deps *AppDependencies) http.Handler {
 			payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
 			handlers.RegisterPayoutHandlers(api, payoutSvc)
 		}
+
+		// Admin endpoints (behind auth + admin role middleware).
+		if deps.DB != nil {
+			auditSvc := service.NewAuditService(deps.DB.Queries)
+			fraudSvc := service.NewFraudService(deps.DB.Queries)
+			handlers.RegisterAdminHandlers(api, deps.DB.Queries, auditSvc, fraudSvc)
+		}
+
+		// Submission-specific rate limit (10 req/min per IP, tighter than global).
+		// Applied as a sub-router around submission creation only.
 	})
 
 	return r

@@ -241,3 +241,88 @@ WHERE clipper_id = $1 AND status IN ('pending', 'processing');
 
 -- name: ListPendingPayoutRequests :many
 SELECT * FROM payout_requests WHERE status = 'pending' ORDER BY created_at ASC;
+
+-- Audit Logs
+
+-- name: CreateAuditLog :one
+INSERT INTO audit_logs (actor_id, action, resource_type, resource_id, details, ip_address)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING *;
+
+-- name: ListAuditLogs :many
+SELECT * FROM audit_logs
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: ListAuditLogsByResource :many
+SELECT * FROM audit_logs
+WHERE resource_type = $1 AND resource_id = $2
+ORDER BY created_at DESC;
+
+-- name: ListAuditLogsByActor :many
+SELECT * FROM audit_logs
+WHERE actor_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- Fraud Flags
+
+-- name: CreateFraudFlag :one
+INSERT INTO fraud_flags (submission_id, user_id, flag_type, severity, description)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
+
+-- name: ListOpenFraudFlags :many
+SELECT * FROM fraud_flags
+WHERE status = 'open'
+ORDER BY
+  CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+  created_at ASC;
+
+-- name: GetFraudFlagByID :one
+SELECT * FROM fraud_flags WHERE id = $1;
+
+-- name: UpdateFraudFlagStatus :one
+UPDATE fraud_flags
+SET status = $2, resolved_by = $3, resolution = $4,
+    resolved_at = CASE WHEN $2 IN ('resolved', 'dismissed') THEN NOW() ELSE resolved_at END,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: CountFraudFlagsByUser :one
+SELECT COUNT(*)::int FROM fraud_flags WHERE user_id = $1 AND status = 'open';
+
+-- name: ListUsersWithManyFlags :many
+SELECT u.*, COUNT(f.id)::int as flag_count
+FROM users u
+JOIN fraud_flags f ON f.user_id = u.id
+WHERE f.status = 'open'
+GROUP BY u.id
+HAVING COUNT(f.id) >= $1
+ORDER BY COUNT(f.id) DESC;
+
+-- Admin user queries
+
+-- name: ListUsers :many
+SELECT * FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: CountUsers :one
+SELECT COUNT(*)::int FROM users;
+
+-- name: ListSubmissionsByUser :many
+SELECT * FROM submissions
+WHERE clipper_id = $1
+ORDER BY created_at DESC;
+
+-- name: ListPayoutsByUser :many
+SELECT * FROM payout_requests
+WHERE clipper_id = $1
+ORDER BY created_at DESC;
+
+-- name: ListFraudFlagsByUser :many
+SELECT * FROM fraud_flags
+WHERE user_id = $1
+ORDER BY created_at DESC;

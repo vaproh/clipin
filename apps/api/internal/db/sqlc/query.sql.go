@@ -33,6 +33,17 @@ func (q *Queries) CountCampaignsFiltered(ctx context.Context, arg CountCampaigns
 	return count, err
 }
 
+const countFraudFlagsByUser = `-- name: CountFraudFlagsByUser :one
+SELECT COUNT(*)::int FROM fraud_flags WHERE user_id = $1 AND status = 'open'
+`
+
+func (q *Queries) CountFraudFlagsByUser(ctx context.Context, userID pgtype.Text) (int32, error) {
+	row := q.db.QueryRow(ctx, countFraudFlagsByUser, userID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countSnapshotsBySubmission = `-- name: CountSnapshotsBySubmission :one
 SELECT COUNT(*) FROM metric_snapshots
 WHERE submission_id = $1
@@ -70,6 +81,57 @@ func (q *Queries) CountSubmissionsByClipperForCampaign(ctx context.Context, arg 
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*)::int FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const createAuditLog = `-- name: CreateAuditLog :one
+
+INSERT INTO audit_logs (actor_id, action, resource_type, resource_id, details, ip_address)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, actor_id, action, resource_type, resource_id, details, ip_address, created_at
+`
+
+type CreateAuditLogParams struct {
+	ActorID      string      `json:"actor_id"`
+	Action       string      `json:"action"`
+	ResourceType string      `json:"resource_type"`
+	ResourceID   string      `json:"resource_id"`
+	Details      []byte      `json:"details"`
+	IpAddress    pgtype.Text `json:"ip_address"`
+}
+
+// Audit Logs
+func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error) {
+	row := q.db.QueryRow(ctx, createAuditLog,
+		arg.ActorID,
+		arg.Action,
+		arg.ResourceType,
+		arg.ResourceID,
+		arg.Details,
+		arg.IpAddress,
+	)
+	var i AuditLog
+	err := row.Scan(
+		&i.ID,
+		&i.ActorID,
+		&i.Action,
+		&i.ResourceType,
+		&i.ResourceID,
+		&i.Details,
+		&i.IpAddress,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const createCampaign = `-- name: CreateCampaign :one
@@ -150,6 +212,48 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 		&i.StartsAt,
 		&i.EndsAt,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createFraudFlag = `-- name: CreateFraudFlag :one
+
+INSERT INTO fraud_flags (submission_id, user_id, flag_type, severity, description)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, submission_id, user_id, flag_type, severity, description, status, resolved_by, resolution, created_at, resolved_at, updated_at
+`
+
+type CreateFraudFlagParams struct {
+	SubmissionID pgtype.UUID `json:"submission_id"`
+	UserID       pgtype.Text `json:"user_id"`
+	FlagType     string      `json:"flag_type"`
+	Severity     string      `json:"severity"`
+	Description  pgtype.Text `json:"description"`
+}
+
+// Fraud Flags
+func (q *Queries) CreateFraudFlag(ctx context.Context, arg CreateFraudFlagParams) (FraudFlag, error) {
+	row := q.db.QueryRow(ctx, createFraudFlag,
+		arg.SubmissionID,
+		arg.UserID,
+		arg.FlagType,
+		arg.Severity,
+		arg.Description,
+	)
+	var i FraudFlag
+	err := row.Scan(
+		&i.ID,
+		&i.SubmissionID,
+		&i.UserID,
+		&i.FlagType,
+		&i.Severity,
+		&i.Description,
+		&i.Status,
+		&i.ResolvedBy,
+		&i.Resolution,
+		&i.CreatedAt,
+		&i.ResolvedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -439,6 +543,30 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign
 		&i.StartsAt,
 		&i.EndsAt,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getFraudFlagByID = `-- name: GetFraudFlagByID :one
+SELECT id, submission_id, user_id, flag_type, severity, description, status, resolved_by, resolution, created_at, resolved_at, updated_at FROM fraud_flags WHERE id = $1
+`
+
+func (q *Queries) GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (FraudFlag, error) {
+	row := q.db.QueryRow(ctx, getFraudFlagByID, id)
+	var i FraudFlag
+	err := row.Scan(
+		&i.ID,
+		&i.SubmissionID,
+		&i.UserID,
+		&i.FlagType,
+		&i.Severity,
+		&i.Description,
+		&i.Status,
+		&i.ResolvedBy,
+		&i.Resolution,
+		&i.CreatedAt,
+		&i.ResolvedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -761,6 +889,128 @@ func (q *Queries) ListActiveCampaigns(ctx context.Context) ([]Campaign, error) {
 	return items, nil
 }
 
+const listAuditLogs = `-- name: ListAuditLogs :many
+SELECT id, actor_id, action, resource_type, resource_id, details, ip_address, created_at FROM audit_logs
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListAuditLogsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogs, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActorID,
+			&i.Action,
+			&i.ResourceType,
+			&i.ResourceID,
+			&i.Details,
+			&i.IpAddress,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditLogsByActor = `-- name: ListAuditLogsByActor :many
+SELECT id, actor_id, action, resource_type, resource_id, details, ip_address, created_at FROM audit_logs
+WHERE actor_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListAuditLogsByActorParams struct {
+	ActorID string `json:"actor_id"`
+	Limit   int32  `json:"limit"`
+	Offset  int32  `json:"offset"`
+}
+
+func (q *Queries) ListAuditLogsByActor(ctx context.Context, arg ListAuditLogsByActorParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogsByActor, arg.ActorID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActorID,
+			&i.Action,
+			&i.ResourceType,
+			&i.ResourceID,
+			&i.Details,
+			&i.IpAddress,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditLogsByResource = `-- name: ListAuditLogsByResource :many
+SELECT id, actor_id, action, resource_type, resource_id, details, ip_address, created_at FROM audit_logs
+WHERE resource_type = $1 AND resource_id = $2
+ORDER BY created_at DESC
+`
+
+type ListAuditLogsByResourceParams struct {
+	ResourceType string `json:"resource_type"`
+	ResourceID   string `json:"resource_id"`
+}
+
+func (q *Queries) ListAuditLogsByResource(ctx context.Context, arg ListAuditLogsByResourceParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogsByResource, arg.ResourceType, arg.ResourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.ActorID,
+			&i.Action,
+			&i.ResourceType,
+			&i.ResourceID,
+			&i.Details,
+			&i.IpAddress,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCampaignsByOwner = `-- name: ListCampaignsByOwner :many
 SELECT id, owner_id, title, description, brief_url, platform, status, cpm_rate, total_budget, remaining_budget, platform_fee, escrow_id, max_clips_per_campaign, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, starts_at, ends_at, created_at, updated_at FROM campaigns
 WHERE owner_id = $1
@@ -874,6 +1124,45 @@ func (q *Queries) ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFi
 	return items, nil
 }
 
+const listFraudFlagsByUser = `-- name: ListFraudFlagsByUser :many
+SELECT id, submission_id, user_id, flag_type, severity, description, status, resolved_by, resolution, created_at, resolved_at, updated_at FROM fraud_flags
+WHERE user_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListFraudFlagsByUser(ctx context.Context, userID pgtype.Text) ([]FraudFlag, error) {
+	rows, err := q.db.Query(ctx, listFraudFlagsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FraudFlag
+	for rows.Next() {
+		var i FraudFlag
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubmissionID,
+			&i.UserID,
+			&i.FlagType,
+			&i.Severity,
+			&i.Description,
+			&i.Status,
+			&i.ResolvedBy,
+			&i.Resolution,
+			&i.CreatedAt,
+			&i.ResolvedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLedgerEntriesByCampaign = `-- name: ListLedgerEntriesByCampaign :many
 SELECT id, idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata, created_at FROM ledger_entries WHERE campaign_id = $1 ORDER BY created_at ASC
 `
@@ -944,12 +1233,91 @@ func (q *Queries) ListLedgerEntriesByClipper(ctx context.Context, clipperID pgty
 	return items, nil
 }
 
+const listOpenFraudFlags = `-- name: ListOpenFraudFlags :many
+SELECT id, submission_id, user_id, flag_type, severity, description, status, resolved_by, resolution, created_at, resolved_at, updated_at FROM fraud_flags
+WHERE status = 'open'
+ORDER BY
+  CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+  created_at ASC
+`
+
+func (q *Queries) ListOpenFraudFlags(ctx context.Context) ([]FraudFlag, error) {
+	rows, err := q.db.Query(ctx, listOpenFraudFlags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FraudFlag
+	for rows.Next() {
+		var i FraudFlag
+		if err := rows.Scan(
+			&i.ID,
+			&i.SubmissionID,
+			&i.UserID,
+			&i.FlagType,
+			&i.Severity,
+			&i.Description,
+			&i.Status,
+			&i.ResolvedBy,
+			&i.Resolution,
+			&i.CreatedAt,
+			&i.ResolvedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPayoutRequestsByClipper = `-- name: ListPayoutRequestsByClipper :many
 SELECT id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at FROM payout_requests WHERE clipper_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPayoutRequestsByClipper(ctx context.Context, clipperID string) ([]PayoutRequest, error) {
 	rows, err := q.db.Query(ctx, listPayoutRequestsByClipper, clipperID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PayoutRequest
+	for rows.Next() {
+		var i PayoutRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClipperID,
+			&i.Amount,
+			&i.UpiID,
+			&i.Status,
+			&i.ProviderRef,
+			&i.FailureReason,
+			&i.IdempotencyKey,
+			&i.CreatedAt,
+			&i.ProcessedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPayoutsByUser = `-- name: ListPayoutsByUser :many
+SELECT id, clipper_id, amount, upi_id, status, provider_ref, failure_reason, idempotency_key, created_at, processed_at, updated_at FROM payout_requests
+WHERE clipper_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListPayoutsByUser(ctx context.Context, clipperID string) ([]PayoutRequest, error) {
+	rows, err := q.db.Query(ctx, listPayoutsByUser, clipperID)
 	if err != nil {
 		return nil, err
 	}
@@ -1228,6 +1596,136 @@ func (q *Queries) ListSubmissionsByClipper(ctx context.Context, clipperID string
 	return items, nil
 }
 
+const listSubmissionsByUser = `-- name: ListSubmissionsByUser :many
+SELECT id, campaign_id, clipper_id, post_url, platform, platform_post_id, status, rejection_reason, approved_at, auto_approved_at, created_at, updated_at FROM submissions
+WHERE clipper_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListSubmissionsByUser(ctx context.Context, clipperID string) ([]Submission, error) {
+	rows, err := q.db.Query(ctx, listSubmissionsByUser, clipperID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Submission
+	for rows.Next() {
+		var i Submission
+		if err := rows.Scan(
+			&i.ID,
+			&i.CampaignID,
+			&i.ClipperID,
+			&i.PostUrl,
+			&i.Platform,
+			&i.PlatformPostID,
+			&i.Status,
+			&i.RejectionReason,
+			&i.ApprovedAt,
+			&i.AutoApprovedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+
+SELECT id, email, display_name, role, created_at, updated_at, upi_id FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+// Admin user queries
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.DisplayName,
+			&i.Role,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UpiID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersWithManyFlags = `-- name: ListUsersWithManyFlags :many
+SELECT u.id, u.email, u.display_name, u.role, u.created_at, u.updated_at, u.upi_id, COUNT(f.id)::int as flag_count
+FROM users u
+JOIN fraud_flags f ON f.user_id = u.id
+WHERE f.status = 'open'
+GROUP BY u.id
+HAVING COUNT(f.id) >= $1
+ORDER BY COUNT(f.id) DESC
+`
+
+type ListUsersWithManyFlagsRow struct {
+	ID          string             `json:"id"`
+	Email       string             `json:"email"`
+	DisplayName pgtype.Text        `json:"display_name"`
+	Role        string             `json:"role"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	UpiID       pgtype.Text        `json:"upi_id"`
+	FlagCount   int32              `json:"flag_count"`
+}
+
+func (q *Queries) ListUsersWithManyFlags(ctx context.Context, id pgtype.UUID) ([]ListUsersWithManyFlagsRow, error) {
+	rows, err := q.db.Query(ctx, listUsersWithManyFlags, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersWithManyFlagsRow
+	for rows.Next() {
+		var i ListUsersWithManyFlagsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.DisplayName,
+			&i.Role,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.UpiID,
+			&i.FlagCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sumEarningsByClipper = `-- name: SumEarningsByClipper :one
 SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
 WHERE clipper_id = $1 AND entry_type = 'earning'
@@ -1368,6 +1866,47 @@ func (q *Queries) UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignSt
 		&i.StartsAt,
 		&i.EndsAt,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateFraudFlagStatus = `-- name: UpdateFraudFlagStatus :one
+UPDATE fraud_flags
+SET status = $2, resolved_by = $3, resolution = $4,
+    resolved_at = CASE WHEN $2 IN ('resolved', 'dismissed') THEN NOW() ELSE resolved_at END,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, submission_id, user_id, flag_type, severity, description, status, resolved_by, resolution, created_at, resolved_at, updated_at
+`
+
+type UpdateFraudFlagStatusParams struct {
+	ID         pgtype.UUID `json:"id"`
+	Status     string      `json:"status"`
+	ResolvedBy pgtype.Text `json:"resolved_by"`
+	Resolution pgtype.Text `json:"resolution"`
+}
+
+func (q *Queries) UpdateFraudFlagStatus(ctx context.Context, arg UpdateFraudFlagStatusParams) (FraudFlag, error) {
+	row := q.db.QueryRow(ctx, updateFraudFlagStatus,
+		arg.ID,
+		arg.Status,
+		arg.ResolvedBy,
+		arg.Resolution,
+	)
+	var i FraudFlag
+	err := row.Scan(
+		&i.ID,
+		&i.SubmissionID,
+		&i.UserID,
+		&i.FlagType,
+		&i.Severity,
+		&i.Description,
+		&i.Status,
+		&i.ResolvedBy,
+		&i.Resolution,
+		&i.CreatedAt,
+		&i.ResolvedAt,
 		&i.UpdatedAt,
 	)
 	return i, err

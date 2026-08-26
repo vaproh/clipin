@@ -8,6 +8,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AuditLog struct {
+	ID           pgtype.UUID        `json:"id"`
+	ActorID      string             `json:"actor_id"`
+	Action       string             `json:"action"`
+	ResourceType string             `json:"resource_type"`
+	ResourceID   string             `json:"resource_id"`
+	Details      []byte             `json:"details"`
+	IpAddress    pgtype.Text        `json:"ip_address"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
 type Campaign struct {
 	ID                  pgtype.UUID        `json:"id"`
 	OwnerID             string             `json:"owner_id"`
@@ -29,6 +40,21 @@ type Campaign struct {
 	EndsAt              pgtype.Timestamptz `json:"ends_at"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FraudFlag struct {
+	ID           pgtype.UUID        `json:"id"`
+	SubmissionID pgtype.UUID        `json:"submission_id"`
+	UserID       pgtype.Text        `json:"user_id"`
+	FlagType     string             `json:"flag_type"`
+	Severity     string             `json:"severity"`
+	Description  pgtype.Text        `json:"description"`
+	Status       string             `json:"status"`
+	ResolvedBy   pgtype.Text        `json:"resolved_by"`
+	Resolution   pgtype.Text        `json:"resolution"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ResolvedAt   pgtype.Timestamptz `json:"resolved_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type LedgerEntry struct {

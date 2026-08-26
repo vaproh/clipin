@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"clipin/apps/api/internal/auth"
 	"clipin/apps/api/internal/config"
 	"clipin/apps/api/internal/db"
 	"clipin/apps/api/internal/http/handlers"
@@ -75,8 +76,15 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	api := humachi.New(r, humaConfig)
 
-	// Handlers
+	// Handlers (public: /health, /openapi.json, /docs stay on the root router)
 	handlers.RegisterHealthHandler(api, deps, deps.Config.Env)
+
+	// Authenticated routes live in this group, behind Clerk JWT verification.
+	// The middleware no-ops when CLERK_JWKS_URL is unset (development).
+	r.Group(func(r chi.Router) {
+		r.Use(auth.AuthMiddleware(auth.NewJWKSProvider(deps.Config.ClerkJWKSURL)))
+		// Private handlers register here in later milestones.
+	})
 
 	return r
 }

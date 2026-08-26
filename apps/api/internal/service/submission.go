@@ -30,12 +30,18 @@ type SubmissionStore interface {
 
 // SubmissionService implements submission lifecycle business logic.
 type SubmissionService struct {
-	store SubmissionStore
+	store  SubmissionStore
+	ledger *LedgerService
 }
 
 // NewSubmissionService creates a new SubmissionService.
 func NewSubmissionService(store SubmissionStore) *SubmissionService {
 	return &SubmissionService{store: store}
+}
+
+// WithLedger attaches a ledger service for recording financial entries.
+func (s *SubmissionService) WithLedger(ledger *LedgerService) {
+	s.ledger = ledger
 }
 
 // Sentinel errors for submission operations.

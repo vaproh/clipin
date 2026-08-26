@@ -178,3 +178,34 @@ SELECT s.*, c.min_views_per_clip, c.cpm_rate, c.owner_id
 FROM submissions s
 JOIN campaigns c ON s.campaign_id = c.id
 WHERE s.id = $1;
+
+-- name: CreateLedgerEntry :one
+INSERT INTO ledger_entries (idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (idempotency_key) DO NOTHING
+RETURNING *;
+
+-- name: GetLedgerEntryByIdempotencyKey :one
+SELECT * FROM ledger_entries WHERE idempotency_key = $1;
+
+-- name: ListLedgerEntriesByCampaign :many
+SELECT * FROM ledger_entries WHERE campaign_id = $1 ORDER BY created_at ASC;
+
+-- name: ListLedgerEntriesByClipper :many
+SELECT * FROM ledger_entries WHERE clipper_id = $1 ORDER BY created_at ASC;
+
+-- name: SumEarningsByClipper :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE clipper_id = $1 AND entry_type = 'earning';
+
+-- name: SumEarningsByClipperForCampaign :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE clipper_id = $1 AND campaign_id = $2 AND entry_type = 'earning';
+
+-- name: SumFeesByCampaign :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE campaign_id = $1 AND entry_type = 'platform_fee';
+
+-- name: SumSpendByCampaign :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE campaign_id = $1 AND entry_type = 'earning';

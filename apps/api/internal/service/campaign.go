@@ -42,12 +42,18 @@ type CampaignListResult struct {
 
 // CampaignService implements campaign marketplace business logic.
 type CampaignService struct {
-	store CampaignStore
-	cache *CampaignCache
+	store  CampaignStore
+	cache  *CampaignCache
+	ledger *LedgerService
 }
 
 func NewCampaignService(store CampaignStore, cache *CampaignCache) *CampaignService {
 	return &CampaignService{store: store, cache: cache}
+}
+
+// WithLedger attaches a ledger service for recording financial entries.
+func (s *CampaignService) WithLedger(ledger *LedgerService) {
+	s.ledger = ledger
 }
 
 // ListPublic returns a paginated, filtered list of active campaigns.
@@ -214,6 +220,17 @@ func (s *CampaignService) Create(ctx context.Context, ownerID string, in *Create
 	if err != nil {
 		return nil, fmt.Errorf("create campaign: %w", err)
 	}
+
+	// Record platform fee in ledger (best-effort; campaign is already created).
+	if s.ledger != nil {
+		feeKey := fmt.Sprintf("fee:%s", fmt.Sprintf("%x", id.Bytes))
+		if _, err := s.ledger.RecordPlatformFee(ctx, id, fee, feeKey); err != nil {
+			// Log but don't fail the campaign creation. The fee is already
+			// tracked in the campaigns.platform_fee column.
+			fmt.Printf("WARNING: failed to record platform fee in ledger: %v\n", err)
+		}
+	}
+
 	return &campaign, nil
 }
 
@@ -312,6 +329,14 @@ func (s *CampaignService) Cancel(ctx context.Context, ownerID string, campaignID
 	}
 	if campaign.Status != "draft" && campaign.Status != "paused" && campaign.Status != "active" {
 		return nil, fmt.Errorf("can only cancel draft, paused, or active campaigns, current status: %s", campaign.Status)
+	}
+
+	// Record refund for unspent budget (best-effort).
+	if s.ledger != nil && campaign.RemainingBudget > 0 {
+		refundKey := fmt.Sprintf("refund:%s", fmt.Sprintf("%x", campaignID.Bytes))
+		if _, err := s.ledger.RecordRefund(ctx, campaignID, campaign.RemainingBudget, refundKey); err != nil {
+			fmt.Printf("WARNING: failed to record refund in ledger: %v\n", err)
+		}
 	}
 
 	updated, err := s.store.UpdateCampaignStatus(ctx, sqlc.UpdateCampaignStatusParams{

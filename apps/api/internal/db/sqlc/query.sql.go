@@ -155,6 +155,51 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 	return i, err
 }
 
+const createLedgerEntry = `-- name: CreateLedgerEntry :one
+INSERT INTO ledger_entries (idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (idempotency_key) DO NOTHING
+RETURNING id, idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata, created_at
+`
+
+type CreateLedgerEntryParams struct {
+	IdempotencyKey string      `json:"idempotency_key"`
+	EntryType      string      `json:"entry_type"`
+	CampaignID     pgtype.UUID `json:"campaign_id"`
+	SubmissionID   pgtype.UUID `json:"submission_id"`
+	ClipperID      pgtype.Text `json:"clipper_id"`
+	Amount         int32       `json:"amount"`
+	Description    pgtype.Text `json:"description"`
+	Metadata       []byte      `json:"metadata"`
+}
+
+func (q *Queries) CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) (LedgerEntry, error) {
+	row := q.db.QueryRow(ctx, createLedgerEntry,
+		arg.IdempotencyKey,
+		arg.EntryType,
+		arg.CampaignID,
+		arg.SubmissionID,
+		arg.ClipperID,
+		arg.Amount,
+		arg.Description,
+		arg.Metadata,
+	)
+	var i LedgerEntry
+	err := row.Scan(
+		&i.ID,
+		&i.IdempotencyKey,
+		&i.EntryType,
+		&i.CampaignID,
+		&i.SubmissionID,
+		&i.ClipperID,
+		&i.Amount,
+		&i.Description,
+		&i.Metadata,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createMetricSnapshot = `-- name: CreateMetricSnapshot :one
 INSERT INTO metric_snapshots (submission_id, platform, views, likes, comments, shares, captured_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -401,6 +446,28 @@ func (q *Queries) GetLatestSnapshotForSubmission(ctx context.Context, submission
 		&i.Comments,
 		&i.Shares,
 		&i.CapturedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getLedgerEntryByIdempotencyKey = `-- name: GetLedgerEntryByIdempotencyKey :one
+SELECT id, idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata, created_at FROM ledger_entries WHERE idempotency_key = $1
+`
+
+func (q *Queries) GetLedgerEntryByIdempotencyKey(ctx context.Context, idempotencyKey string) (LedgerEntry, error) {
+	row := q.db.QueryRow(ctx, getLedgerEntryByIdempotencyKey, idempotencyKey)
+	var i LedgerEntry
+	err := row.Scan(
+		&i.ID,
+		&i.IdempotencyKey,
+		&i.EntryType,
+		&i.CampaignID,
+		&i.SubmissionID,
+		&i.ClipperID,
+		&i.Amount,
+		&i.Description,
+		&i.Metadata,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -741,6 +808,76 @@ func (q *Queries) ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFi
 	return items, nil
 }
 
+const listLedgerEntriesByCampaign = `-- name: ListLedgerEntriesByCampaign :many
+SELECT id, idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata, created_at FROM ledger_entries WHERE campaign_id = $1 ORDER BY created_at ASC
+`
+
+func (q *Queries) ListLedgerEntriesByCampaign(ctx context.Context, campaignID pgtype.UUID) ([]LedgerEntry, error) {
+	rows, err := q.db.Query(ctx, listLedgerEntriesByCampaign, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LedgerEntry
+	for rows.Next() {
+		var i LedgerEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.IdempotencyKey,
+			&i.EntryType,
+			&i.CampaignID,
+			&i.SubmissionID,
+			&i.ClipperID,
+			&i.Amount,
+			&i.Description,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLedgerEntriesByClipper = `-- name: ListLedgerEntriesByClipper :many
+SELECT id, idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata, created_at FROM ledger_entries WHERE clipper_id = $1 ORDER BY created_at ASC
+`
+
+func (q *Queries) ListLedgerEntriesByClipper(ctx context.Context, clipperID pgtype.Text) ([]LedgerEntry, error) {
+	rows, err := q.db.Query(ctx, listLedgerEntriesByClipper, clipperID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LedgerEntry
+	for rows.Next() {
+		var i LedgerEntry
+		if err := rows.Scan(
+			&i.ID,
+			&i.IdempotencyKey,
+			&i.EntryType,
+			&i.CampaignID,
+			&i.SubmissionID,
+			&i.ClipperID,
+			&i.Amount,
+			&i.Description,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPendingSubmissionsOlderThan = `-- name: ListPendingSubmissionsOlderThan :many
 SELECT s.id, s.campaign_id, s.clipper_id, s.post_url, s.platform, s.platform_post_id, s.status, s.rejection_reason, s.approved_at, s.auto_approved_at, s.created_at, s.updated_at, c.auto_approve_hours, c.owner_id
 FROM submissions s
@@ -951,6 +1088,59 @@ func (q *Queries) ListSubmissionsByClipper(ctx context.Context, clipperID string
 		return nil, err
 	}
 	return items, nil
+}
+
+const sumEarningsByClipper = `-- name: SumEarningsByClipper :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE clipper_id = $1 AND entry_type = 'earning'
+`
+
+func (q *Queries) SumEarningsByClipper(ctx context.Context, clipperID pgtype.Text) (int64, error) {
+	row := q.db.QueryRow(ctx, sumEarningsByClipper, clipperID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const sumEarningsByClipperForCampaign = `-- name: SumEarningsByClipperForCampaign :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE clipper_id = $1 AND campaign_id = $2 AND entry_type = 'earning'
+`
+
+type SumEarningsByClipperForCampaignParams struct {
+	ClipperID  pgtype.Text `json:"clipper_id"`
+	CampaignID pgtype.UUID `json:"campaign_id"`
+}
+
+func (q *Queries) SumEarningsByClipperForCampaign(ctx context.Context, arg SumEarningsByClipperForCampaignParams) (int64, error) {
+	row := q.db.QueryRow(ctx, sumEarningsByClipperForCampaign, arg.ClipperID, arg.CampaignID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const sumFeesByCampaign = `-- name: SumFeesByCampaign :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE campaign_id = $1 AND entry_type = 'platform_fee'
+`
+
+func (q *Queries) SumFeesByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, sumFeesByCampaign, campaignID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const sumSpendByCampaign = `-- name: SumSpendByCampaign :one
+SELECT COALESCE(SUM(amount), 0)::bigint as total FROM ledger_entries
+WHERE campaign_id = $1 AND entry_type = 'earning'
+`
+
+func (q *Queries) SumSpendByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, sumSpendByCampaign, campaignID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
 }
 
 const updateCampaignBudget = `-- name: UpdateCampaignBudget :one

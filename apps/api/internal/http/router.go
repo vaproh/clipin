@@ -85,6 +85,10 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		campaignCache := service.NewCampaignCache(deps.Redis)
 		campaignSvc = service.NewCampaignService(deps.DB.Queries, campaignCache)
+		// Attach ledger for recording platform fees on campaign creation.
+		if ledgerSvc := service.NewLedgerService(deps.DB.Queries); ledgerSvc != nil {
+			campaignSvc.WithLedger(ledgerSvc)
+		}
 	}
 	handlers.RegisterCampaignHandlers(api, campaignSvc)
 
@@ -128,6 +132,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		// Submission endpoints (behind auth middleware).
 		if deps.DB != nil {
 			submissionSvc := service.NewSubmissionService(deps.DB.Queries)
+			submissionSvc.WithLedger(service.NewLedgerService(deps.DB.Queries))
 			handlers.RegisterSubmissionHandlers(api, submissionSvc)
 		}
 
@@ -135,6 +140,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		if deps.DB != nil {
 			verificationSvc := service.NewVerificationService(deps.DB.Queries)
 			handlers.RegisterVerificationStatusHandlers(api, verificationSvc)
+		}
+
+		// Ledger/earnings endpoints (behind auth middleware).
+		if deps.DB != nil {
+			ledgerSvc := service.NewLedgerService(deps.DB.Queries)
+			handlers.RegisterLedgerHandlers(api, ledgerSvc)
 		}
 	})
 

@@ -31,6 +31,19 @@ type Campaign struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type LedgerEntry struct {
+	ID             pgtype.UUID        `json:"id"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	EntryType      string             `json:"entry_type"`
+	CampaignID     pgtype.UUID        `json:"campaign_id"`
+	SubmissionID   pgtype.UUID        `json:"submission_id"`
+	ClipperID      pgtype.Text        `json:"clipper_id"`
+	Amount         int32              `json:"amount"`
+	Description    pgtype.Text        `json:"description"`
+	Metadata       []byte             `json:"metadata"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type MetricSnapshot struct {
 	ID           pgtype.UUID        `json:"id"`
 	SubmissionID pgtype.UUID        `json:"submission_id"`

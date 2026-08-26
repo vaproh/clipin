@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { useRoute } from '#app'
-import { LayoutDashboard, Megaphone, Video, Wallet, CreditCard, Settings } from 'lucide-vue-next'
+import { LayoutDashboard, Megaphone, Video, Wallet, CreditCard, Settings, Shield } from 'lucide-vue-next'
 
 const route = useRoute()
+const { data: profile } = useUserQuery()
 
 interface NavItem {
   name: string
@@ -20,6 +21,12 @@ const navItems: NavItem[] = [
   { name: 'Payouts', path: '/app/payouts', icon: CreditCard, badge: 'SOON' },
   { name: 'Settings', path: '/app/settings', icon: Settings },
 ]
+
+const adminItems: NavItem[] = [
+  { name: 'Admin', path: '/app/admin', icon: Shield },
+]
+
+const isAdmin = computed(() => profile.value?.role === 'admin')
 </script>
 
 <template>
@@ -54,6 +61,26 @@ const navItems: NavItem[] = [
           <span v-if="item.badge" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neutral-950 text-neutral-500 border border-neutral-900">
             {{ item.badge }}
           </span>
+        </NuxtLink>
+      </nav>
+
+      <!-- Admin Nav -->
+      <nav v-if="isAdmin" class="space-y-0.5 text-xs font-medium pt-3 border-t border-neutral-900">
+        <NuxtLink
+          v-for="item in adminItems"
+          :key="item.path"
+          :to="item.path"
+          class="flex items-center justify-between px-2.5 py-2 rounded transition-colors"
+          :class="[
+            route.path === item.path
+              ? 'bg-neutral-900 text-white border border-neutral-800'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-950'
+          ]"
+        >
+          <div class="flex items-center gap-2.5">
+            <component :is="item.icon" class="w-4 h-4 text-neutral-400" :class="{ 'text-white': route.path === item.path }" />
+            <span>{{ item.name }}</span>
+          </div>
         </NuxtLink>
       </nav>
     </div>

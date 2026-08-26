@@ -1,7 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { Ref } from 'vue'
 
-export type UserRole = 'clipper' | 'owner'
+export type UserRole = 'clipper' | 'owner' | 'admin'
 
 export interface UserProfile {
   id: string
@@ -518,5 +518,144 @@ export function useCampaignLedger(campaignId: Ref<string>) {
     queryKey: ['ledger', campaignId],
     queryFn: () => fetchApi<CampaignLedger>(`/me/campaigns/${campaignId.value}/ledger`),
     enabled: () => !!campaignId.value,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+export interface FraudFlag {
+  id: string
+  submission_id: string | null
+  user_id: string | null
+  flag_type: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  description: string | null
+  status: 'open' | 'investigating' | 'resolved' | 'dismissed'
+  created_at: string
+}
+
+export interface AuditLog {
+  id: string
+  actor_id: string
+  action: string
+  resource_type: string
+  resource_id: string
+  details: Record<string, unknown> | null
+  ip_address: string | null
+  created_at: string
+}
+
+export interface AdminUser {
+  id: string
+  email: string
+  display_name: string
+  role: UserRole
+  created_at: string
+  flag_count: number
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[]
+  total: number
+}
+
+export interface AdminFraudFlagsResponse {
+  flags: FraudFlag[]
+}
+
+export interface AdminAuditLogsResponse {
+  logs: AuditLog[]
+  total: number
+}
+
+export interface AdminStatsResponse {
+  total_users: number
+  open_fraud_flags: number
+  total_campaigns: number
+}
+
+/** Admin: fetch paginated users. */
+export function useAdminUsers(page: Ref<number> = ref(1)) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['admin', 'users', page],
+    queryFn: () =>
+      fetchApi<AdminUsersResponse>(`/admin/users?page=${page.value}&page_size=20`),
+  })
+}
+
+/** Admin: fetch user detail. */
+export function useAdminUser(userId: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['admin', 'user', userId],
+    queryFn: () => fetchApi<{ user: AdminUser; submissions: Submission[]; payouts: PayoutRequest[]; fraud_flags: FraudFlag[] }>(`/admin/users/${userId.value}`),
+    enabled: () => !!userId.value,
+  })
+}
+
+/** Admin: fetch all fraud flags. */
+export function useAdminFraudFlags() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['admin', 'fraud-flags'],
+    queryFn: () => fetchApi<AdminFraudFlagsResponse>('/admin/fraud-flags'),
+  })
+}
+
+/** Admin: resolve a fraud flag. */
+export function useResolveFraudFlag() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: ({ id, resolution }: { id: string; resolution: string }) =>
+      fetchApi(`/admin/fraud-flags/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ resolution }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'fraud-flags'] })
+    },
+  })
+}
+
+/** Admin: dismiss a fraud flag. */
+export function useDismissFraudFlag() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/admin/fraud-flags/${id}/dismiss`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'fraud-flags'] })
+    },
+  })
+}
+
+/** Admin: fetch paginated audit logs. */
+export function useAdminAuditLogs(page: Ref<number> = ref(1)) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['admin', 'audit-logs', page],
+    queryFn: () =>
+      fetchApi<AdminAuditLogsResponse>(`/admin/audit-logs?page=${page.value}&page_size=20`),
+  })
+}
+
+/** Admin: fetch dashboard stats. */
+export function useAdminStats() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: () => fetchApi<AdminStatsResponse>('/admin/stats'),
   })
 }

@@ -1,6 +1,7 @@
 version: "2"
 sql:
-  - schema: "schema.sql"
+  - schema: "migrations/*.up.sql"
+    engine: "postgresql"
     queries: "query.sql"
     gen:
       go:

@@ -446,3 +446,33 @@ SELECT * FROM campaign_templates WHERE id = $1;
 INSERT INTO campaign_templates (name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
+
+-- Campaign analytics queries
+
+-- name: GetCampaignSubmissionStats :one
+SELECT
+    COUNT(*)::int as total_submissions,
+    COUNT(*) FILTER (WHERE status = 'pending')::int as pending,
+    COUNT(*) FILTER (WHERE status IN ('approved', 'auto_approved'))::int as approved,
+    COUNT(*) FILTER (WHERE status = 'rejected')::int as rejected,
+    COUNT(DISTINCT clipper_id)::int as unique_clippers
+FROM submissions
+WHERE campaign_id = $1;
+
+-- name: GetCampaignViewStats :one
+SELECT
+    COALESCE(SUM(ms.views), 0)::bigint as total_views,
+    COALESCE(SUM(ms.likes), 0)::bigint as total_likes,
+    COALESCE(SUM(ms.comments), 0)::bigint as total_comments,
+    COALESCE(SUM(ms.shares), 0)::bigint as total_shares
+FROM metric_snapshots ms
+JOIN submissions s ON ms.submission_id = s.id
+WHERE s.campaign_id = $1;
+
+-- name: GetCampaignFinancialSummary :one
+SELECT
+    COALESCE(SUM(CASE WHEN entry_type = 'earning' THEN amount ELSE 0 END), 0)::int as total_earnings,
+    COALESCE(SUM(CASE WHEN entry_type = 'platform_fee' THEN amount ELSE 0 END), 0)::int as total_fees,
+    COALESCE(SUM(CASE WHEN entry_type = 'refund' THEN ABS(amount) ELSE 0 END), 0)::int as total_refunds
+FROM ledger_entries
+WHERE campaign_id = $1;

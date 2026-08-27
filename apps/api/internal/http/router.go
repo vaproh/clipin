@@ -141,6 +141,10 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	}
 
 	if deps.DB != nil {
+		handlers.RegisterCampaignAnalyticsHandlers(authenticatedAPI, deps.DB.Queries)
+	}
+
+	if deps.DB != nil {
 		submissionSvc := service.NewSubmissionService(deps.DB.Queries)
 		submissionSvc.WithLedger(service.NewLedgerService(deps.DB.Queries))
 		notifSvc := service.NewNotificationService(deps.DB.Queries)

@@ -732,6 +732,62 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign
 	return i, err
 }
 
+const getCampaignFinancialSummary = `-- name: GetCampaignFinancialSummary :one
+SELECT
+    COALESCE(SUM(CASE WHEN entry_type = 'earning' THEN amount ELSE 0 END), 0)::int as total_earnings,
+    COALESCE(SUM(CASE WHEN entry_type = 'platform_fee' THEN amount ELSE 0 END), 0)::int as total_fees,
+    COALESCE(SUM(CASE WHEN entry_type = 'refund' THEN ABS(amount) ELSE 0 END), 0)::int as total_refunds
+FROM ledger_entries
+WHERE campaign_id = $1
+`
+
+type GetCampaignFinancialSummaryRow struct {
+	TotalEarnings int32 `json:"total_earnings"`
+	TotalFees     int32 `json:"total_fees"`
+	TotalRefunds  int32 `json:"total_refunds"`
+}
+
+func (q *Queries) GetCampaignFinancialSummary(ctx context.Context, campaignID pgtype.UUID) (GetCampaignFinancialSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getCampaignFinancialSummary, campaignID)
+	var i GetCampaignFinancialSummaryRow
+	err := row.Scan(&i.TotalEarnings, &i.TotalFees, &i.TotalRefunds)
+	return i, err
+}
+
+const getCampaignSubmissionStats = `-- name: GetCampaignSubmissionStats :one
+
+SELECT
+    COUNT(*)::int as total_submissions,
+    COUNT(*) FILTER (WHERE status = 'pending')::int as pending,
+    COUNT(*) FILTER (WHERE status IN ('approved', 'auto_approved'))::int as approved,
+    COUNT(*) FILTER (WHERE status = 'rejected')::int as rejected,
+    COUNT(DISTINCT clipper_id)::int as unique_clippers
+FROM submissions
+WHERE campaign_id = $1
+`
+
+type GetCampaignSubmissionStatsRow struct {
+	TotalSubmissions int32 `json:"total_submissions"`
+	Pending          int32 `json:"pending"`
+	Approved         int32 `json:"approved"`
+	Rejected         int32 `json:"rejected"`
+	UniqueClippers   int32 `json:"unique_clippers"`
+}
+
+// Campaign analytics queries
+func (q *Queries) GetCampaignSubmissionStats(ctx context.Context, campaignID pgtype.UUID) (GetCampaignSubmissionStatsRow, error) {
+	row := q.db.QueryRow(ctx, getCampaignSubmissionStats, campaignID)
+	var i GetCampaignSubmissionStatsRow
+	err := row.Scan(
+		&i.TotalSubmissions,
+		&i.Pending,
+		&i.Approved,
+		&i.Rejected,
+		&i.UniqueClippers,
+	)
+	return i, err
+}
+
 const getCampaignTemplateByID = `-- name: GetCampaignTemplateByID :one
 SELECT id, name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template, created_at FROM campaign_templates WHERE id = $1
 `
@@ -752,6 +808,111 @@ func (q *Queries) GetCampaignTemplateByID(ctx context.Context, id pgtype.UUID) (
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getCampaignViewStats = `-- name: GetCampaignViewStats :one
+SELECT
+    COALESCE(SUM(ms.views), 0)::bigint as total_views,
+    COALESCE(SUM(ms.likes), 0)::bigint as total_likes,
+    COALESCE(SUM(ms.comments), 0)::bigint as total_comments,
+    COALESCE(SUM(ms.shares), 0)::bigint as total_shares
+FROM metric_snapshots ms
+JOIN submissions s ON ms.submission_id = s.id
+WHERE s.campaign_id = $1
+`
+
+type GetCampaignViewStatsRow struct {
+	TotalViews    int64 `json:"total_views"`
+	TotalLikes    int64 `json:"total_likes"`
+	TotalComments int64 `json:"total_comments"`
+	TotalShares   int64 `json:"total_shares"`
+}
+
+func (q *Queries) GetCampaignViewStats(ctx context.Context, campaignID pgtype.UUID) (GetCampaignViewStatsRow, error) {
+	row := q.db.QueryRow(ctx, getCampaignViewStats, campaignID)
+	var i GetCampaignViewStatsRow
+	err := row.Scan(
+		&i.TotalViews,
+		&i.TotalLikes,
+		&i.TotalComments,
+		&i.TotalShares,
+	)
+	return i, err
+}
+
+const getClipperCampaignCount = `-- name: GetClipperCampaignCount :one
+SELECT COUNT(DISTINCT campaign_id)::int as campaigns_participated
+FROM submissions
+WHERE clipper_id = $1
+`
+
+func (q *Queries) GetClipperCampaignCount(ctx context.Context, clipperID string) (int32, error) {
+	row := q.db.QueryRow(ctx, getClipperCampaignCount, clipperID)
+	var campaigns_participated int32
+	err := row.Scan(&campaigns_participated)
+	return campaigns_participated, err
+}
+
+const getClipperSubmissionStats = `-- name: GetClipperSubmissionStats :one
+SELECT
+    COUNT(*)::int as total_submissions,
+    COUNT(*) FILTER (WHERE status IN ('approved', 'auto_approved'))::int as approved_submissions,
+    COUNT(*) FILTER (WHERE status = 'pending')::int as pending_submissions,
+    COUNT(*) FILTER (WHERE status = 'rejected')::int as rejected_submissions
+FROM submissions
+WHERE clipper_id = $1
+`
+
+type GetClipperSubmissionStatsRow struct {
+	TotalSubmissions    int32 `json:"total_submissions"`
+	ApprovedSubmissions int32 `json:"approved_submissions"`
+	PendingSubmissions  int32 `json:"pending_submissions"`
+	RejectedSubmissions int32 `json:"rejected_submissions"`
+}
+
+func (q *Queries) GetClipperSubmissionStats(ctx context.Context, clipperID string) (GetClipperSubmissionStatsRow, error) {
+	row := q.db.QueryRow(ctx, getClipperSubmissionStats, clipperID)
+	var i GetClipperSubmissionStatsRow
+	err := row.Scan(
+		&i.TotalSubmissions,
+		&i.ApprovedSubmissions,
+		&i.PendingSubmissions,
+		&i.RejectedSubmissions,
+	)
+	return i, err
+}
+
+const getClipperTotalEarnings = `-- name: GetClipperTotalEarnings :one
+SELECT COALESCE(SUM(amount), 0)::int as total_earnings
+FROM ledger_entries
+WHERE clipper_id = $1 AND entry_type = 'earning'
+`
+
+func (q *Queries) GetClipperTotalEarnings(ctx context.Context, clipperID pgtype.Text) (int32, error) {
+	row := q.db.QueryRow(ctx, getClipperTotalEarnings, clipperID)
+	var total_earnings int32
+	err := row.Scan(&total_earnings)
+	return total_earnings, err
+}
+
+const getClipperTotalViews = `-- name: GetClipperTotalViews :one
+SELECT COALESCE(SUM(ms.views), 0)::bigint as total_views
+FROM metric_snapshots ms
+JOIN submissions s ON ms.submission_id = s.id
+WHERE s.clipper_id = $1
+AND ms.id = (
+    SELECT id FROM metric_snapshots
+    WHERE submission_id = s.id
+    ORDER BY captured_at DESC
+    LIMIT 1
+)
+`
+
+func (q *Queries) GetClipperTotalViews(ctx context.Context, clipperID string) (int64, error) {
+	row := q.db.QueryRow(ctx, getClipperTotalViews, clipperID)
+	var total_views int64
+	err := row.Scan(&total_views)
+	return total_views, err
 }
 
 const getFraudFlagByID = `-- name: GetFraudFlagByID :one
@@ -1076,6 +1237,35 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.UpiID,
 		&i.AvatarUrl,
 		&i.Bio,
+	)
+	return i, err
+}
+
+const getUserPublicProfile = `-- name: GetUserPublicProfile :one
+
+
+SELECT id, display_name, avatar_url, bio, created_at FROM users WHERE id = $1
+`
+
+type GetUserPublicProfileRow struct {
+	ID          string             `json:"id"`
+	DisplayName pgtype.Text        `json:"display_name"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
+	Bio         pgtype.Text        `json:"bio"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Admin user queries
+// Clipper public profile queries
+func (q *Queries) GetUserPublicProfile(ctx context.Context, id string) (GetUserPublicProfileRow, error) {
+	row := q.db.QueryRow(ctx, getUserPublicProfile, id)
+	var i GetUserPublicProfileRow
+	err := row.Scan(
+		&i.ID,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.Bio,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -1828,6 +2018,35 @@ func (q *Queries) ListSocialAccountsByUserID(ctx context.Context, userID string)
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSocialAccountsByUserIDPublic = `-- name: ListSocialAccountsByUserIDPublic :many
+SELECT platform, platform_username FROM social_accounts WHERE user_id = $1
+`
+
+type ListSocialAccountsByUserIDPublicRow struct {
+	Platform         string      `json:"platform"`
+	PlatformUsername pgtype.Text `json:"platform_username"`
+}
+
+func (q *Queries) ListSocialAccountsByUserIDPublic(ctx context.Context, userID string) ([]ListSocialAccountsByUserIDPublicRow, error) {
+	rows, err := q.db.Query(ctx, listSocialAccountsByUserIDPublic, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSocialAccountsByUserIDPublicRow
+	for rows.Next() {
+		var i ListSocialAccountsByUserIDPublicRow
+		if err := rows.Scan(&i.Platform, &i.PlatformUsername); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

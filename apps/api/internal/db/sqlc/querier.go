@@ -38,7 +38,15 @@ type Querier interface {
 	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
 	DeleteSocialAccount(ctx context.Context, arg DeleteSocialAccountParams) error
 	GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign, error)
+	GetCampaignFinancialSummary(ctx context.Context, campaignID pgtype.UUID) (GetCampaignFinancialSummaryRow, error)
+	// Campaign analytics queries
+	GetCampaignSubmissionStats(ctx context.Context, campaignID pgtype.UUID) (GetCampaignSubmissionStatsRow, error)
 	GetCampaignTemplateByID(ctx context.Context, id pgtype.UUID) (CampaignTemplate, error)
+	GetCampaignViewStats(ctx context.Context, campaignID pgtype.UUID) (GetCampaignViewStatsRow, error)
+	GetClipperCampaignCount(ctx context.Context, clipperID string) (int32, error)
+	GetClipperSubmissionStats(ctx context.Context, clipperID string) (GetClipperSubmissionStatsRow, error)
+	GetClipperTotalEarnings(ctx context.Context, clipperID pgtype.Text) (int32, error)
+	GetClipperTotalViews(ctx context.Context, clipperID string) (int64, error)
 	GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (FraudFlag, error)
 	GetInitialSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error)
 	GetLatestSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error)
@@ -51,6 +59,9 @@ type Querier interface {
 	GetSubmissionsNeedingVerification(ctx context.Context, limit int32) ([]GetSubmissionsNeedingVerificationRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id string) (User, error)
+	// Admin user queries
+	// Clipper public profile queries
+	GetUserPublicProfile(ctx context.Context, id string) (GetUserPublicProfileRow, error)
 	ListActiveCampaigns(ctx context.Context) ([]Campaign, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListAuditLogsByActor(ctx context.Context, arg ListAuditLogsByActorParams) ([]AuditLog, error)
@@ -70,6 +81,7 @@ type Querier interface {
 	ListPendingSubmissionsOlderThan(ctx context.Context, createdAt pgtype.Timestamptz) ([]ListPendingSubmissionsOlderThanRow, error)
 	ListSnapshotsBySubmission(ctx context.Context, submissionID pgtype.UUID) ([]MetricSnapshot, error)
 	ListSocialAccountsByUserID(ctx context.Context, userID string) ([]SocialAccount, error)
+	ListSocialAccountsByUserIDPublic(ctx context.Context, userID string) ([]ListSocialAccountsByUserIDPublicRow, error)
 	ListSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) ([]Submission, error)
 	ListSubmissionsByClipper(ctx context.Context, clipperID string) ([]Submission, error)
 	ListSubmissionsByUser(ctx context.Context, clipperID string) ([]Submission, error)

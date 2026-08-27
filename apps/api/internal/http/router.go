@@ -44,7 +44,7 @@ func (a *AppDependencies) CheckRedis(ctx context.Context) bool {
 func NewRouter(deps *AppDependencies) http.Handler {
 	r := chi.NewRouter()
 
-	// Middleware
+	// --- Middleware (all Use() calls must precede any Route/Group/Handle) ---
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Logger)
@@ -52,8 +52,6 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	r.Use(chimw.Timeout(60 * time.Second))
 
 	// CORS: echo back the request origin only if it is allowlisted.
-	// Non-matching origins get no header, so the browser blocks the response.
-	// An empty allowlist rejects all cross-origin requests (safer than *).
 	allowedOrigins := deps.Config.AllowedOrigins
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -71,24 +69,33 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		})
 	})
 
-	// Huma OpenAPI router
+	// Rate limiter (in-memory, suitable for single-instance).
+	rl := middleware.NewRateLimiter()
+	r.Use(rl.Middleware(100, middleware.IPKey))
+
+	// --- Create sub-routers BEFORE humachi so chi doesn't panic ---
+	internal := r.Group(func(r chi.Router) {
+		r.Use(auth.InternalAuthMiddleware(deps.Config.VerifierAPIKey))
+	})
+
+	authenticated := r.Group(func(r chi.Router) {
+		var userStore auth.UserStore
+		if deps.DB != nil {
+			userStore = deps.DB.Queries
+		}
+		r.Use(auth.AuthMiddleware(auth.NewJWKSProvider(deps.Config.ClerkJWKSURL)))
+		r.Use(auth.SessionMiddleware(userStore))
+	})
+
+	// --- Huma OpenAPI config ---
 	humaConfig := huma.DefaultConfig("ClipIN API", "1.0.0")
 	humaConfig.OpenAPIPath = "/openapi.json"
 	humaConfig.DocsPath = "/docs"
 	humaConfig.Info.Description = "ClipIN Performance Clipping Marketplace API"
 
+	// --- Public API (root) ---
 	api := humachi.New(r, humaConfig)
-
-	// Rate limiter (in-memory, suitable for single-instance).
-	rl := middleware.NewRateLimiter()
-
-	// Global per-IP rate limit for all endpoints (100 req/min).
-	r.Use(rl.Middleware(100, middleware.IPKey))
-
-	// Handlers (public: /health, /openapi.json, /docs stay on the root router)
 	handlers.RegisterHealthHandler(api, deps, deps.Config.Env)
-
-	// Webhook handlers (public, no auth).
 	handlers.RegisterWebhookHandlers(api)
 
 	// Campaign marketplace service (public endpoints)
@@ -96,85 +103,64 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		campaignCache := service.NewCampaignCache(deps.Redis)
 		campaignSvc = service.NewCampaignService(deps.DB.Queries, campaignCache)
-		// Attach ledger for recording platform fees on campaign creation.
 		if ledgerSvc := service.NewLedgerService(deps.DB.Queries); ledgerSvc != nil {
 			campaignSvc.WithLedger(ledgerSvc)
 		}
 	}
 	handlers.RegisterCampaignHandlers(api, campaignSvc)
 
-	// Internal routes (verifier API key auth, not Clerk JWT).
-	// These endpoints are for the external verifier service.
-	r.Group(func(r chi.Router) {
-		r.Use(auth.InternalAuthMiddleware(deps.Config.VerifierAPIKey))
+	// --- Internal API (verifier key auth) ---
+	intCfg := humaConfig
+	intCfg.OpenAPIPath = ""
+	intCfg.DocsPath = ""
+	internalAPI := humachi.New(internal, intCfg)
+	if deps.DB != nil {
+		verificationSvc := service.NewVerificationService(deps.DB.Queries)
+		handlers.RegisterInternalVerificationHandlers(internalAPI, verificationSvc)
+	}
 
-		api := humachi.New(r, humaConfig)
+	// --- Authenticated API (Clerk JWT + session) ---
+	authCfg := humaConfig
+	authCfg.OpenAPIPath = ""
+	authCfg.DocsPath = ""
+	authenticatedAPI := humachi.New(authenticated, authCfg)
 
-		if deps.DB != nil {
-			verificationSvc := service.NewVerificationService(deps.DB.Queries)
-			handlers.RegisterInternalVerificationHandlers(api, verificationSvc)
-		}
-	})
+	var userStore auth.UserStore
+	if deps.DB != nil {
+		userStore = deps.DB.Queries
+	}
+	handlers.RegisterUserHandlers(authenticatedAPI, userStore)
 
-	// Authenticated routes live in this group, behind Clerk JWT verification
-	// and session loading. The middleware no-ops when CLERK_JWKS_URL is unset
-	// (development).
-	//
-	// The group binds its own huma.API so protected handlers stay behind the
-	// middleware chain; their OpenAPI schemas are not served on the root API.
-	r.Group(func(r chi.Router) {
-		api := humachi.New(r, humaConfig)
+	if campaignSvc != nil {
+		handlers.RegisterCampaignOwnerHandlers(authenticatedAPI, campaignSvc)
+	}
 
-		var userStore auth.UserStore
-		if deps.DB != nil {
-			userStore = deps.DB.Queries
-		}
+	if deps.DB != nil {
+		submissionSvc := service.NewSubmissionService(deps.DB.Queries)
+		submissionSvc.WithLedger(service.NewLedgerService(deps.DB.Queries))
+		handlers.RegisterSubmissionHandlers(authenticatedAPI, submissionSvc)
+	}
 
-		r.Use(auth.AuthMiddleware(auth.NewJWKSProvider(deps.Config.ClerkJWKSURL)))
-		r.Use(auth.SessionMiddleware(userStore))
+	if deps.DB != nil {
+		verificationSvc := service.NewVerificationService(deps.DB.Queries)
+		handlers.RegisterVerificationStatusHandlers(authenticatedAPI, verificationSvc)
+	}
 
-		handlers.RegisterUserHandlers(api, userStore)
+	if deps.DB != nil {
+		ledgerSvc := service.NewLedgerService(deps.DB.Queries)
+		handlers.RegisterLedgerHandlers(authenticatedAPI, ledgerSvc)
+	}
 
-		// Owner campaign management endpoints (behind auth middleware).
-		if campaignSvc != nil {
-			handlers.RegisterCampaignOwnerHandlers(api, campaignSvc)
-		}
+	if deps.DB != nil {
+		payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
+		handlers.RegisterPayoutHandlers(authenticatedAPI, payoutSvc)
+	}
 
-		// Submission endpoints (behind auth middleware).
-		if deps.DB != nil {
-			submissionSvc := service.NewSubmissionService(deps.DB.Queries)
-			submissionSvc.WithLedger(service.NewLedgerService(deps.DB.Queries))
-			handlers.RegisterSubmissionHandlers(api, submissionSvc)
-		}
-
-		// Verification status endpoint (behind auth middleware).
-		if deps.DB != nil {
-			verificationSvc := service.NewVerificationService(deps.DB.Queries)
-			handlers.RegisterVerificationStatusHandlers(api, verificationSvc)
-		}
-
-		// Ledger/earnings endpoints (behind auth middleware).
-		if deps.DB != nil {
-			ledgerSvc := service.NewLedgerService(deps.DB.Queries)
-			handlers.RegisterLedgerHandlers(api, ledgerSvc)
-		}
-
-		// Payout endpoints (behind auth middleware).
-		if deps.DB != nil {
-			payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
-			handlers.RegisterPayoutHandlers(api, payoutSvc)
-		}
-
-		// Admin endpoints (behind auth + admin role middleware).
-		if deps.DB != nil {
-			auditSvc := service.NewAuditService(deps.DB.Queries)
-			fraudSvc := service.NewFraudService(deps.DB.Queries)
-			handlers.RegisterAdminHandlers(api, deps.DB.Queries, auditSvc, fraudSvc)
-		}
-
-		// Submission-specific rate limit (10 req/min per IP, tighter than global).
-		// Applied as a sub-router around submission creation only.
-	})
+	if deps.DB != nil {
+		auditSvc := service.NewAuditService(deps.DB.Queries)
+		fraudSvc := service.NewFraudService(deps.DB.Queries)
+		handlers.RegisterAdminHandlers(authenticatedAPI, deps.DB.Queries, auditSvc, fraudSvc)
+	}
 
 	return r
 }

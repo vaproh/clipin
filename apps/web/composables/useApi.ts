@@ -405,6 +405,50 @@ export function useRejectSubmission(campaignId: Ref<string>) {
 }
 
 // ---------------------------------------------------------------------------
+// Batch Review
+// ---------------------------------------------------------------------------
+
+export interface BatchResult {
+  approved: number
+  failed: number
+  errors: Array<{ id: string; reason: string }>
+}
+
+/** Batch approve submissions (campaign owner). */
+export function useBatchApproveSubmissions(campaignId: Ref<string>) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      fetchApi<BatchResult>(`/campaigns/${campaignId.value}/submissions/batch-approve`, {
+        method: 'POST',
+        body: JSON.stringify({ submission_ids: ids }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaignSubmissions', campaignId] })
+    },
+  })
+}
+
+/** Batch reject submissions (campaign owner). */
+export function useBatchRejectSubmissions(campaignId: Ref<string>) {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: ({ ids, reason }: { ids: string[]; reason?: string }) =>
+      fetchApi<BatchResult>(`/campaigns/${campaignId.value}/submissions/batch-reject`, {
+        method: 'POST',
+        body: JSON.stringify({ submission_ids: ids, reason }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaignSubmissions', campaignId] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Payouts
 // ---------------------------------------------------------------------------
 

@@ -39,7 +39,92 @@ const stats = computed(() => ({
   rejected: submissions.value.filter((s) => s.status === 'rejected').length,
 }))
 
-// Reject dialog
+// Selection
+const selectedIds = ref<Set<string>>(new Set())
+
+const selectableSubmissions = computed(() =>
+  filteredSubmissions.value.filter((s) => s.status === 'pending')
+)
+
+const selectableIds = computed(() => selectableSubmissions.value.map((s) => s.id))
+
+const allSelected = computed(() =>
+  selectableIds.value.length > 0 && selectableIds.value.every((id) => selectedIds.value.has(id))
+)
+
+const someSelected = computed(() =>
+  selectableIds.value.some((id) => selectedIds.value.has(id)) && !allSelected.value
+)
+
+function toggleSelectAll() {
+  if (allSelected.value) {
+    selectedIds.value = new Set()
+  } else {
+    selectedIds.value = new Set(selectableIds.value)
+  }
+}
+
+function toggleSelection(id: string) {
+  const next = new Set(selectedIds.value)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    next.add(id)
+  }
+  selectedIds.value = next
+}
+
+function clearSelection() {
+  selectedIds.value = new Set()
+}
+
+// Clear selection on filter change
+watch(statusFilter, () => clearSelection())
+
+// Batch mutations
+const feedback = ref<{ type: 'success' | 'error'; message: string } | null>(null)
+
+const { mutate: batchApprove, isPending: batchApproving } = useBatchApproveSubmissions(id)
+const { mutate: batchReject, isPending: batchRejecting } = useBatchRejectSubmissions(id)
+
+const batchLoading = computed(() => batchApproving.value || batchRejecting.value)
+
+function handleBatchApprove() {
+  const ids = Array.from(selectedIds.value)
+  if (ids.length === 0) return
+  batchApprove(ids, {
+    onSuccess: (result) => {
+      feedback.value = { type: 'success', message: `Approved ${result.approved} submissions` }
+      clearSelection()
+      setTimeout(() => { feedback.value = null }, 3000)
+    },
+    onError: (err) => {
+      feedback.value = { type: 'error', message: err.message }
+      setTimeout(() => { feedback.value = null }, 3000)
+    },
+  })
+}
+
+function handleBatchReject(reason: string) {
+  const ids = Array.from(selectedIds.value)
+  if (ids.length === 0) return
+  batchReject(
+    { ids, reason: reason || undefined },
+    {
+      onSuccess: (result) => {
+        feedback.value = { type: 'success', message: `Rejected ${result.approved} submissions` }
+        clearSelection()
+        setTimeout(() => { feedback.value = null }, 3000)
+      },
+      onError: (err) => {
+        feedback.value = { type: 'error', message: err.message }
+        setTimeout(() => { feedback.value = null }, 3000)
+      },
+    },
+  )
+}
+
+// Individual reject dialog
 const rejectTarget = ref<string | null>(null)
 const rejectReason = ref('')
 const { mutate: approveSubmission, isPending: approving } = useApproveSubmission(id)
@@ -92,6 +177,17 @@ function onDialogChange(open: boolean) {
     </div>
 
     <template v-else>
+      <!-- Feedback banner -->
+      <Transition name="slide-up">
+        <div
+          v-if="feedback"
+          class="rounded border p-3 text-xs font-mono"
+          :class="feedback.type === 'success' ? 'bg-neutral-900 border-neutral-700 text-neutral-300' : 'bg-neutral-900 border-neutral-700 text-red-400'"
+        >
+          {{ feedback.message }}
+        </div>
+      </Transition>
+
       <!-- Stats -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
         <SharedStatCard label="Total" :value="stats.total" />
@@ -112,8 +208,30 @@ function onDialogChange(open: boolean) {
             @click="statusFilter = opt"
           >
             {{ opt === 'all' ? 'All' : opt }}
+            <span class="ml-1 text-[10px] opacity-60">
+              {{ opt === 'all' ? stats.total : opt === 'pending' ? stats.pending : opt === 'approved' ? stats.approved : stats.rejected }}
+            </span>
           </button>
         </div>
+      </div>
+
+      <!-- Select all (only on pending filter or all when pending exist) -->
+      <div
+        v-if="selectableSubmissions.length > 0"
+        class="flex items-center gap-2 text-xs font-mono text-neutral-500"
+      >
+        <button
+          type="button"
+          class="shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors"
+          :class="allSelected ? 'bg-white border-white' : someSelected ? 'bg-neutral-700 border-neutral-600' : 'border-neutral-600 hover:border-neutral-400'"
+          @click="toggleSelectAll"
+        >
+          <svg v-if="allSelected" class="w-2.5 h-2.5 text-black" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <div v-else-if="someSelected" class="w-2 h-0.5 bg-white rounded" />
+        </button>
+        <span>Select all pending</span>
       </div>
 
       <!-- Empty -->
@@ -130,8 +248,11 @@ function onDialogChange(open: boolean) {
           :key="sub.id"
           :submission="sub"
           show-actions
+          :selectable="sub.status === 'pending'"
+          :selected="selectedIds.has(sub.id)"
           @approve="handleApprove"
           @reject="handleRejectRequest"
+          @update:selected="toggleSelection(sub.id)"
         />
       </div>
 
@@ -156,6 +277,27 @@ function onDialogChange(open: boolean) {
           </UiDialogFooter>
         </UiDialogContent>
       </UiDialog>
+
+      <!-- Batch review bar -->
+      <SubmissionBatchReviewBar
+        :count="selectedIds.size"
+        :loading="batchLoading"
+        @approve="handleBatchApprove"
+        @reject="handleBatchReject"
+        @clear="clearSelection"
+      />
     </template>
   </div>
 </template>
+
+<style scoped>
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(8px);
+  opacity: 0;
+}
+</style>

@@ -60,5 +60,7 @@ const role = computed(() => profile.value?.role)
         </NuxtLink>
       </div>
     </div>
+
+    <SettingsSocialAccounts />
   </div>
 </template>

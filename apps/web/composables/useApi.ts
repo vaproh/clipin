@@ -527,6 +527,139 @@ export function useCampaignLedger(campaignId: Ref<string>) {
 }
 
 // ---------------------------------------------------------------------------
+// Social Accounts
+// ---------------------------------------------------------------------------
+
+export interface SocialAccount {
+  id: string
+  user_id: string
+  platform: 'youtube' | 'instagram' | 'tiktok'
+  platform_user_id: string
+  platform_username: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Fetch authenticated user's social accounts. */
+export function useSocialAccounts() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['me', 'social-accounts'],
+    queryFn: () => fetchApi<SocialAccount[]>('/me/social-accounts'),
+  })
+}
+
+/** Connect a social account. */
+export function useConnectSocialAccount() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (body: { platform: string; platform_user_id: string; platform_username: string }) =>
+      fetchApi<SocialAccount>('/me/social-accounts', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'social-accounts'] })
+    },
+  })
+}
+
+/** Disconnect a social account. */
+export function useDisconnectSocialAccount() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/me/social-accounts/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'social-accounts'] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export interface Notification {
+  id: string
+  user_id: string
+  type: 'submission_approved' | 'submission_rejected' | 'campaign_update' | 'payout_completed' | 'system'
+  title: string
+  body: string | null
+  link: string | null
+  is_read: boolean
+  created_at: string
+}
+
+/** Fetch paginated notifications. */
+export function useNotifications(limit = 20, offset = 0) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['me', 'notifications', { limit, offset }],
+    queryFn: () => fetchApi<Notification[]>(`/me/notifications?limit=${limit}&offset=${offset}`),
+  })
+}
+
+/** Polling unread notification count. */
+export function useUnreadNotificationCount() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['me', 'notifications', 'unread-count'],
+    queryFn: () => fetchApi<{ count: number }>('/me/notifications/unread-count'),
+    refetchInterval: 30_000,
+  })
+}
+
+/** Mark a notification as read. */
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/me/notifications/${id}/read`, { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'notifications'] })
+    },
+  })
+}
+
+/** Mark all notifications as read. */
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: () =>
+      fetchApi('/me/notifications/read-all', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'notifications'] })
+    },
+  })
+}
+
+/** Delete a notification. */
+export function useDeleteNotification() {
+  const queryClient = useQueryClient()
+  const { fetchApi } = useApi()
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      fetchApi(`/me/notifications/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'notifications'] })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
 

@@ -90,6 +90,15 @@ test:
     @just test-api
     @just test-web
 
+# Run Postgres integration tests against a real database
+test-integration:
+    @echo "==> Running integration tests..."
+    @docker compose exec -T postgres psql -U clipin -d clipin_dev -c "SELECT 1 FROM pg_database WHERE datname = 'clipin_test'" | grep -q 1 || \
+        docker compose exec -T postgres psql -U clipin -d clipin_dev -c "CREATE DATABASE clipin_test;"
+    @echo "    Database clipin_test ready"
+    cd apps/api && DATABASE_URL="postgres://clipin:clipin_dev_pass@localhost:5433/clipin_test?sslmode=disable" \
+        go test -tags integration -count=1 -v ./internal/integration/...
+
 # --- Linting & Formatting ---
 
 # Run linters across all projects

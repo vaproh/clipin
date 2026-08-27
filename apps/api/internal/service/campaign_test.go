@@ -18,6 +18,7 @@ type mockCampaignStore struct {
 	countFiltered   func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error)
 	listByOwner     func(ctx context.Context, ownerID string) ([]sqlc.Campaign, error)
 	createCampaign  func(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error)
+	updateCampaign  func(ctx context.Context, arg sqlc.UpdateCampaignParams) (sqlc.Campaign, error)
 	updateStatus    func(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error)
 }
 
@@ -52,6 +53,13 @@ func (m *mockCampaignStore) ListCampaignsByOwner(ctx context.Context, ownerID st
 func (m *mockCampaignStore) CreateCampaign(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error) {
 	if m.createCampaign != nil {
 		return m.createCampaign(ctx, arg)
+	}
+	return sqlc.Campaign{}, nil
+}
+
+func (m *mockCampaignStore) UpdateCampaign(ctx context.Context, arg sqlc.UpdateCampaignParams) (sqlc.Campaign, error) {
+	if m.updateCampaign != nil {
+		return m.updateCampaign(ctx, arg)
 	}
 	return sqlc.Campaign{}, nil
 }
@@ -244,5 +252,77 @@ func TestListByOwner(t *testing.T) {
 	}
 	if len(result) != 2 {
 		t.Fatalf("expected 2 campaigns, got %d", len(result))
+	}
+}
+
+func TestUpdate_PersistsFields(t *testing.T) {
+	c := testCampaign("1", "owner1", "Old Title", "draft")
+	var capturedArg sqlc.UpdateCampaignParams
+	store := &mockCampaignStore{
+		getByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return c, nil
+		},
+		updateCampaign: func(ctx context.Context, arg sqlc.UpdateCampaignParams) (sqlc.Campaign, error) {
+			capturedArg = arg
+			return sqlc.Campaign{
+				ID:                  arg.ID,
+				Title:               arg.Title,
+				Description:         arg.Description,
+				BriefUrl:            arg.BriefUrl,
+				MaxClipsPerCampaign: arg.MaxClipsPerCampaign,
+				MaxClipsPerClipper:  arg.MaxClipsPerClipper,
+				MinViewsPerClip:     arg.MinViewsPerClip,
+				AutoApproveHours:    arg.AutoApproveHours,
+				EndsAt:              arg.EndsAt,
+				Status:              c.Status,
+			}, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+
+	newTitle := "New Title"
+	newDesc := "New description"
+	result, err := svc.Update(context.Background(), "owner1", c.ID, &service.UpdateCampaignInput{
+		Title:       &newTitle,
+		Description: &newDesc,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if capturedArg.Title != "New Title" {
+		t.Errorf("expected title 'New Title', got %q", capturedArg.Title)
+	}
+	if !capturedArg.Description.Valid || capturedArg.Description.String != "New description" {
+		t.Errorf("expected description 'New description', got %v", capturedArg.Description)
+	}
+	if result.Title != "New Title" {
+		t.Errorf("expected returned title 'New Title', got %q", result.Title)
+	}
+}
+
+func TestUpdate_NotFound(t *testing.T) {
+	store := &mockCampaignStore{
+		getByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return sqlc.Campaign{}, pgx.ErrNoRows
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	_, err := svc.Update(context.Background(), "owner1", pgtype.UUID{Bytes: [16]byte{1}, Valid: true}, &service.UpdateCampaignInput{})
+	if err != service.ErrCampaignNotFound {
+		t.Errorf("expected ErrCampaignNotFound, got %v", err)
+	}
+}
+
+func TestUpdate_NotOwner(t *testing.T) {
+	c := testCampaign("1", "owner1", "My Campaign", "draft")
+	store := &mockCampaignStore{
+		getByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return c, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	_, err := svc.Update(context.Background(), "wrong-owner", c.ID, &service.UpdateCampaignInput{})
+	if err != service.ErrNotOwner {
+		t.Errorf("expected ErrNotOwner, got %v", err)
 	}
 }

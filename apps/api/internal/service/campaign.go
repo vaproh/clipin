@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ type CampaignStore interface {
 	CountCampaignsFiltered(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error)
 	ListCampaignsByOwner(ctx context.Context, ownerID string) ([]sqlc.Campaign, error)
 	CreateCampaign(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error)
+	UpdateCampaign(ctx context.Context, arg sqlc.UpdateCampaignParams) (sqlc.Campaign, error)
 	UpdateCampaignStatus(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error)
 }
 
@@ -125,7 +127,7 @@ func (s *CampaignService) ListPublic(ctx context.Context, f CampaignFilters) (*C
 func (s *CampaignService) GetByID(ctx context.Context, id pgtype.UUID) (*sqlc.Campaign, error) {
 	campaign, err := s.store.GetCampaignByID(ctx, id)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get campaign: %w", err)
@@ -242,7 +244,7 @@ func (s *CampaignService) Update(ctx context.Context, ownerID string, campaignID
 
 	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCampaignNotFound
 		}
 		return nil, fmt.Errorf("get campaign: %w", err)
@@ -281,27 +283,20 @@ func (s *CampaignService) Update(ctx context.Context, ownerID string, campaignID
 		campaign.EndsAt = pgtype.Timestamptz{Valid: true, Time: t}
 	}
 
-	// Re-persist. Since there is no UpdateCampaign query, we update via
-	// status (no-op) to touch updated_at. This is a stub; a proper
-	// UPDATE campaign ... SET ... query should be added when the schema grows.
-	updated, err := s.store.UpdateCampaignStatus(ctx, sqlc.UpdateCampaignStatusParams{
-		ID:     campaignID,
-		Status: campaign.Status,
+	updated, err := s.store.UpdateCampaign(ctx, sqlc.UpdateCampaignParams{
+		ID:                  campaignID,
+		Title:               campaign.Title,
+		Description:         campaign.Description,
+		BriefUrl:            campaign.BriefUrl,
+		MaxClipsPerCampaign: campaign.MaxClipsPerCampaign,
+		MaxClipsPerClipper:  campaign.MaxClipsPerClipper,
+		MinViewsPerClip:     campaign.MinViewsPerClip,
+		AutoApproveHours:    campaign.AutoApproveHours,
+		EndsAt:              campaign.EndsAt,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update campaign: %w", err)
 	}
-
-	// The stub only updates status/updated_at. Copy the fields we changed
-	// onto the returned model so the caller sees the intended state.
-	updated.Title = campaign.Title
-	updated.Description = campaign.Description
-	updated.BriefUrl = campaign.BriefUrl
-	updated.MaxClipsPerCampaign = campaign.MaxClipsPerCampaign
-	updated.MaxClipsPerClipper = campaign.MaxClipsPerClipper
-	updated.MinViewsPerClip = campaign.MinViewsPerClip
-	updated.AutoApproveHours = campaign.AutoApproveHours
-	updated.EndsAt = campaign.EndsAt
 	return &updated, nil
 }
 
@@ -319,7 +314,7 @@ func (s *CampaignService) Resume(ctx context.Context, ownerID string, campaignID
 func (s *CampaignService) Cancel(ctx context.Context, ownerID string, campaignID pgtype.UUID) (*sqlc.Campaign, error) {
 	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCampaignNotFound
 		}
 		return nil, fmt.Errorf("get campaign: %w", err)
@@ -352,7 +347,7 @@ func (s *CampaignService) Cancel(ctx context.Context, ownerID string, campaignID
 func (s *CampaignService) transition(ctx context.Context, ownerID string, campaignID pgtype.UUID, from, to string) (*sqlc.Campaign, error) {
 	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCampaignNotFound
 		}
 		return nil, fmt.Errorf("get campaign: %w", err)

@@ -82,10 +82,24 @@ VALUES (
 )
 RETURNING *;
 
+-- name: UpdateCampaign :one
+UPDATE campaigns
+SET title = $2, description = $3, brief_url = $4, max_clips_per_campaign = $5,
+    max_clips_per_clipper = $6, min_views_per_clip = $7, auto_approve_hours = $8,
+    ends_at = $9, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
 -- name: UpdateCampaignStatus :one
 UPDATE campaigns
 SET status = $2, updated_at = NOW()
 WHERE id = $1
+RETURNING *;
+
+-- name: DeductCampaignBudget :one
+UPDATE campaigns
+SET remaining_budget = remaining_budget - $2, updated_at = NOW()
+WHERE id = $1 AND remaining_budget >= $2
 RETURNING *;
 
 -- name: UpdateCampaignBudget :one
@@ -294,12 +308,12 @@ RETURNING *;
 SELECT COUNT(*)::int FROM fraud_flags WHERE user_id = $1 AND status = 'open';
 
 -- name: ListUsersWithManyFlags :many
-SELECT u.*, COUNT(f.id)::int as flag_count
+SELECT u.id, u.email, u.display_name, u.role, u.created_at, u.updated_at, u.upi_id, COUNT(f.id)::int as flag_count
 FROM users u
 JOIN fraud_flags f ON f.user_id = u.id
 WHERE f.status = 'open'
 GROUP BY u.id
-HAVING COUNT(f.id) >= $1
+HAVING COUNT(f.id) >= $1::int
 ORDER BY COUNT(f.id) DESC;
 
 -- Admin user queries

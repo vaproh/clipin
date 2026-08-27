@@ -12,34 +12,33 @@ export default defineNuxtConfig({
   },
 
   modules: [
-    [
-      '@clerk/nuxt',
-      {
-        publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-        secretKey: process.env.CLERK_SECRET_KEY || process.env.NUXT_CLERK_SECRET_KEY,
-        appearance: {
-          variables: {
-            colorPrimary: '#ffffff',
-            colorBackground: '#0a0a0a',
-            colorInputBackground: '#121212',
-            colorInputText: '#ffffff',
-            colorText: '#ffffff',
-            colorTextSecondary: '#a3a3a3',
-            colorBorder: '#262626',
-            borderRadius: '8px',
+    ...(process.env.E2E_TEST
+      ? []
+      : [['@clerk/nuxt', {
+          publishableKey: process.env.CLERK_PUBLISHABLE_KEY || process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+          secretKey: process.env.CLERK_SECRET_KEY || process.env.NUXT_CLERK_SECRET_KEY,
+          appearance: {
+            variables: {
+              colorPrimary: '#ffffff',
+              colorBackground: '#0a0a0a',
+              colorInputBackground: '#121212',
+              colorInputText: '#ffffff',
+              colorText: '#ffffff',
+              colorTextSecondary: '#a3a3a3',
+              colorBorder: '#262626',
+              borderRadius: '8px',
+            },
+            elements: {
+              card: 'bg-neutral-950 border border-neutral-800 shadow-2xl shadow-black rounded-lg',
+              headerTitle: 'text-white font-semibold tracking-tight',
+              headerSubtitle: 'text-neutral-400 text-xs font-normal',
+              socialButtonsBlockButton: 'bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 transition-colors',
+              formButtonPrimary: 'bg-white text-black hover:bg-neutral-200 transition-colors font-medium text-xs rounded h-9',
+              formFieldInput: 'bg-neutral-900 border border-neutral-800 text-white focus:border-neutral-500 rounded text-xs h-9',
+              footerActionLink: 'text-white hover:underline font-medium',
+            },
           },
-          elements: {
-            card: 'bg-neutral-950 border border-neutral-800 shadow-2xl shadow-black rounded-lg',
-            headerTitle: 'text-white font-semibold tracking-tight',
-            headerSubtitle: 'text-neutral-400 text-xs font-normal',
-            socialButtonsBlockButton: 'bg-neutral-900 border border-neutral-800 text-white hover:bg-neutral-800 transition-colors',
-            formButtonPrimary: 'bg-white text-black hover:bg-neutral-200 transition-colors font-medium text-xs rounded h-9',
-            formFieldInput: 'bg-neutral-900 border border-neutral-800 text-white focus:border-neutral-500 rounded text-xs h-9',
-            footerActionLink: 'text-white hover:underline font-medium',
-          },
-        },
-      },
-    ],
+        }]]),
     '@nuxtjs/tailwindcss',
     '@vueuse/nuxt',
   ],

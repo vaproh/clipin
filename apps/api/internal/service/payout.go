@@ -31,14 +31,20 @@ type PayoutStore interface {
 
 // PayoutService implements UPI payout request business logic.
 type PayoutService struct {
-	store    PayoutStore
-	provider payout.PayoutProvider
-	mu       sync.Mutex // serializes payout balance checks to prevent TOCTOU
+	store         PayoutStore
+	provider      payout.PayoutProvider
+	notifications *NotificationService
+	mu            sync.Mutex // serializes payout balance checks to prevent TOCTOU
 }
 
 // NewPayoutService creates a new PayoutService.
 func NewPayoutService(store PayoutStore, provider payout.PayoutProvider) *PayoutService {
 	return &PayoutService{store: store, provider: provider}
+}
+
+// WithNotifications attaches a notification service for sending in-app notifications.
+func (s *PayoutService) WithNotifications(notifications *NotificationService) {
+	s.notifications = notifications
 }
 
 // Minimum payout threshold: 50000 paise = ₹500.
@@ -183,6 +189,10 @@ func (s *PayoutService) RequestPayout(ctx context.Context, userID string, amount
 			ClipperID:      pgtype.Text{Valid: true, String: userID},
 		}); err != nil {
 			slog.Error("payout ledger entry failed after provider success", "payout_id", fmt.Sprintf("%x", id.Bytes), "error", err)
+		}
+		// Best-effort notification.
+		if s.notifications != nil {
+			_ = s.notifications.NotifyPayoutCompleted(ctx, userID, amount)
 		}
 	}
 

@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS campaign_templates;
+DROP TABLE IF EXISTS notifications;
+ALTER TABLE users DROP COLUMN IF EXISTS avatar_url;
+ALTER TABLE users DROP COLUMN IF EXISTS bio;

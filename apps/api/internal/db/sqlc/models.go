@@ -42,6 +42,19 @@ type Campaign struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type CampaignTemplate struct {
+	ID                  pgtype.UUID        `json:"id"`
+	Name                string             `json:"name"`
+	Platform            string             `json:"platform"`
+	CpmRate             int32              `json:"cpm_rate"`
+	TotalBudget         int32              `json:"total_budget"`
+	MaxClipsPerClipper  pgtype.Int4        `json:"max_clips_per_clipper"`
+	MinViewsPerClip     pgtype.Int4        `json:"min_views_per_clip"`
+	AutoApproveHours    pgtype.Int4        `json:"auto_approve_hours"`
+	DescriptionTemplate pgtype.Text        `json:"description_template"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+}
+
 type FraudFlag struct {
 	ID           pgtype.UUID        `json:"id"`
 	SubmissionID pgtype.UUID        `json:"submission_id"`
@@ -80,6 +93,17 @@ type MetricSnapshot struct {
 	Shares       int64              `json:"shares"`
 	CapturedAt   pgtype.Timestamptz `json:"captured_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type Notification struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    string             `json:"user_id"`
+	Type      string             `json:"type"`
+	Title     string             `json:"title"`
+	Body      pgtype.Text        `json:"body"`
+	Link      pgtype.Text        `json:"link"`
+	IsRead    bool               `json:"is_read"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type PayoutRequest struct {
@@ -132,4 +156,6 @@ type User struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	UpiID       pgtype.Text        `json:"upi_id"`
+	AvatarUrl   pgtype.Text        `json:"avatar_url"`
+	Bio         pgtype.Text        `json:"bio"`
 }

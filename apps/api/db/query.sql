@@ -350,3 +350,56 @@ ORDER BY created_at DESC;
 SELECT * FROM fraud_flags
 WHERE user_id = $1
 ORDER BY created_at DESC;
+
+-- Social account queries
+
+-- name: GetSocialAccountByPlatformAndUser :one
+SELECT * FROM social_accounts WHERE user_id = $1 AND platform = $2;
+
+-- name: UpsertSocialAccount :one
+INSERT INTO social_accounts (user_id, platform, platform_user_id, platform_username, access_token, refresh_token, token_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (platform, platform_user_id) DO UPDATE SET
+    platform_username = EXCLUDED.platform_username,
+    access_token = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    token_expires_at = EXCLUDED.token_expires_at,
+    updated_at = NOW()
+RETURNING *;
+
+-- Notification queries
+
+-- name: CreateNotification :one
+INSERT INTO notifications (user_id, type, title, body, link)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING *;
+
+-- name: ListNotificationsByUser :many
+SELECT * FROM notifications WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: CountUnreadNotifications :one
+SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false;
+
+-- name: MarkNotificationRead :exec
+UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2;
+
+-- name: MarkAllNotificationsRead :exec
+UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false;
+
+-- name: DeleteNotification :exec
+DELETE FROM notifications WHERE id = $1 AND user_id = $2;
+
+-- Campaign template queries
+
+-- name: ListCampaignTemplates :many
+SELECT * FROM campaign_templates ORDER BY created_at DESC;
+
+-- name: GetCampaignTemplateByID :one
+SELECT * FROM campaign_templates WHERE id = $1;
+
+-- name: CreateCampaignTemplate :one
+INSERT INTO campaign_templates (name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING *;

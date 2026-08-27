@@ -33,8 +33,9 @@ type SubmissionStore interface {
 
 // SubmissionService implements submission lifecycle business logic.
 type SubmissionService struct {
-	store  SubmissionStore
-	ledger *LedgerService
+	store         SubmissionStore
+	ledger        *LedgerService
+	notifications *NotificationService
 }
 
 // NewSubmissionService creates a new SubmissionService.
@@ -45,6 +46,11 @@ func NewSubmissionService(store SubmissionStore) *SubmissionService {
 // WithLedger attaches a ledger service for recording financial entries.
 func (s *SubmissionService) WithLedger(ledger *LedgerService) {
 	s.ledger = ledger
+}
+
+// WithNotifications attaches a notification service for sending in-app notifications.
+func (s *SubmissionService) WithNotifications(notifications *NotificationService) {
+	s.notifications = notifications
 }
 
 // Sentinel errors for submission operations.
@@ -218,6 +224,16 @@ func (s *SubmissionService) Approve(ctx context.Context, submissionID pgtype.UUI
 	if err != nil {
 		return nil, fmt.Errorf("read approved submission: %w", err)
 	}
+
+	// Best-effort notification to the clipper.
+	if s.notifications != nil {
+		title := "your clip"
+		if campaign.Title != "" {
+			title = campaign.Title
+		}
+		_ = s.notifications.NotifySubmissionApproved(ctx, submission.ClipperID, title)
+	}
+
 	return &updated, nil
 }
 
@@ -257,6 +273,16 @@ func (s *SubmissionService) Reject(ctx context.Context, submissionID pgtype.UUID
 	if err != nil {
 		return nil, fmt.Errorf("reject submission: %w", err)
 	}
+
+	// Best-effort notification to the clipper.
+	if s.notifications != nil {
+		title := "your clip"
+		if campaign.Title != "" {
+			title = campaign.Title
+		}
+		_ = s.notifications.NotifySubmissionRejected(ctx, submission.ClipperID, title, reason)
+	}
+
 	return &updated, nil
 }
 

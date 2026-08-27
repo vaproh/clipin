@@ -111,6 +111,17 @@ func (q *Queries) CountSubmissionsByClipperForCampaign(ctx context.Context, arg 
 	return count, err
 }
 
+const countUnreadNotifications = `-- name: CountUnreadNotifications :one
+SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false
+`
+
+func (q *Queries) CountUnreadNotifications(ctx context.Context, userID string) (int64, error) {
+	row := q.db.QueryRow(ctx, countUnreadNotifications, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*)::int FROM users
 `
@@ -245,6 +256,50 @@ func (q *Queries) CreateCampaign(ctx context.Context, arg CreateCampaignParams) 
 	return i, err
 }
 
+const createCampaignTemplate = `-- name: CreateCampaignTemplate :one
+INSERT INTO campaign_templates (name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template, created_at
+`
+
+type CreateCampaignTemplateParams struct {
+	Name                string      `json:"name"`
+	Platform            string      `json:"platform"`
+	CpmRate             int32       `json:"cpm_rate"`
+	TotalBudget         int32       `json:"total_budget"`
+	MaxClipsPerClipper  pgtype.Int4 `json:"max_clips_per_clipper"`
+	MinViewsPerClip     pgtype.Int4 `json:"min_views_per_clip"`
+	AutoApproveHours    pgtype.Int4 `json:"auto_approve_hours"`
+	DescriptionTemplate pgtype.Text `json:"description_template"`
+}
+
+func (q *Queries) CreateCampaignTemplate(ctx context.Context, arg CreateCampaignTemplateParams) (CampaignTemplate, error) {
+	row := q.db.QueryRow(ctx, createCampaignTemplate,
+		arg.Name,
+		arg.Platform,
+		arg.CpmRate,
+		arg.TotalBudget,
+		arg.MaxClipsPerClipper,
+		arg.MinViewsPerClip,
+		arg.AutoApproveHours,
+		arg.DescriptionTemplate,
+	)
+	var i CampaignTemplate
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Platform,
+		&i.CpmRate,
+		&i.TotalBudget,
+		&i.MaxClipsPerClipper,
+		&i.MinViewsPerClip,
+		&i.AutoApproveHours,
+		&i.DescriptionTemplate,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createFraudFlag = `-- name: CreateFraudFlag :one
 
 INSERT INTO fraud_flags (submission_id, user_id, flag_type, severity, description)
@@ -368,6 +423,44 @@ func (q *Queries) CreateMetricSnapshot(ctx context.Context, arg CreateMetricSnap
 		&i.Comments,
 		&i.Shares,
 		&i.CapturedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createNotification = `-- name: CreateNotification :one
+
+INSERT INTO notifications (user_id, type, title, body, link)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, user_id, type, title, body, link, is_read, created_at
+`
+
+type CreateNotificationParams struct {
+	UserID string      `json:"user_id"`
+	Type   string      `json:"type"`
+	Title  string      `json:"title"`
+	Body   pgtype.Text `json:"body"`
+	Link   pgtype.Text `json:"link"`
+}
+
+// Notification queries
+func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error) {
+	row := q.db.QueryRow(ctx, createNotification,
+		arg.UserID,
+		arg.Type,
+		arg.Title,
+		arg.Body,
+		arg.Link,
+	)
+	var i Notification
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Type,
+		&i.Title,
+		&i.Body,
+		&i.Link,
+		&i.IsRead,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -500,7 +593,7 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, display_name, role)
 VALUES ($1, $2, $3, $4)
-RETURNING id, email, display_name, role, created_at, updated_at, upi_id
+RETURNING id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio
 `
 
 type CreateUserParams struct {
@@ -526,6 +619,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UpiID,
+		&i.AvatarUrl,
+		&i.Bio,
 	)
 	return i, err
 }
@@ -570,6 +665,20 @@ func (q *Queries) DeductCampaignBudget(ctx context.Context, arg DeductCampaignBu
 	return i, err
 }
 
+const deleteNotification = `-- name: DeleteNotification :exec
+DELETE FROM notifications WHERE id = $1 AND user_id = $2
+`
+
+type DeleteNotificationParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID string      `json:"user_id"`
+}
+
+func (q *Queries) DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error {
+	_, err := q.db.Exec(ctx, deleteNotification, arg.ID, arg.UserID)
+	return err
+}
+
 const deleteSocialAccount = `-- name: DeleteSocialAccount :exec
 DELETE FROM social_accounts WHERE id = $1 AND user_id = $2
 `
@@ -612,6 +721,28 @@ func (q *Queries) GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign
 		&i.EndsAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getCampaignTemplateByID = `-- name: GetCampaignTemplateByID :one
+SELECT id, name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template, created_at FROM campaign_templates WHERE id = $1
+`
+
+func (q *Queries) GetCampaignTemplateByID(ctx context.Context, id pgtype.UUID) (CampaignTemplate, error) {
+	row := q.db.QueryRow(ctx, getCampaignTemplateByID, id)
+	var i CampaignTemplate
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Platform,
+		&i.CpmRate,
+		&i.TotalBudget,
+		&i.MaxClipsPerClipper,
+		&i.MinViewsPerClip,
+		&i.AutoApproveHours,
+		&i.DescriptionTemplate,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -728,6 +859,35 @@ func (q *Queries) GetPayoutRequestByID(ctx context.Context, id pgtype.UUID) (Pay
 		&i.IdempotencyKey,
 		&i.CreatedAt,
 		&i.ProcessedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSocialAccountByPlatformAndUser = `-- name: GetSocialAccountByPlatformAndUser :one
+
+SELECT id, user_id, platform, platform_user_id, platform_username, access_token, refresh_token, token_expires_at, created_at, updated_at FROM social_accounts WHERE user_id = $1 AND platform = $2
+`
+
+type GetSocialAccountByPlatformAndUserParams struct {
+	UserID   string `json:"user_id"`
+	Platform string `json:"platform"`
+}
+
+// Social account queries
+func (q *Queries) GetSocialAccountByPlatformAndUser(ctx context.Context, arg GetSocialAccountByPlatformAndUserParams) (SocialAccount, error) {
+	row := q.db.QueryRow(ctx, getSocialAccountByPlatformAndUser, arg.UserID, arg.Platform)
+	var i SocialAccount
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Platform,
+		&i.PlatformUserID,
+		&i.PlatformUsername,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.TokenExpiresAt,
+		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
@@ -872,7 +1032,7 @@ func (q *Queries) GetSubmissionsNeedingVerification(ctx context.Context, limit i
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, display_name, role, created_at, updated_at, upi_id FROM users WHERE email = $1
+SELECT id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio FROM users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -886,12 +1046,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UpiID,
+		&i.AvatarUrl,
+		&i.Bio,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, display_name, role, created_at, updated_at, upi_id FROM users WHERE id = $1
+SELECT id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -905,6 +1067,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UpiID,
+		&i.AvatarUrl,
+		&i.Bio,
 	)
 	return i, err
 }
@@ -1067,6 +1231,43 @@ func (q *Queries) ListAuditLogsByResource(ctx context.Context, arg ListAuditLogs
 			&i.ResourceID,
 			&i.Details,
 			&i.IpAddress,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCampaignTemplates = `-- name: ListCampaignTemplates :many
+
+SELECT id, name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template, created_at FROM campaign_templates ORDER BY created_at DESC
+`
+
+// Campaign template queries
+func (q *Queries) ListCampaignTemplates(ctx context.Context) ([]CampaignTemplate, error) {
+	rows, err := q.db.Query(ctx, listCampaignTemplates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CampaignTemplate
+	for rows.Next() {
+		var i CampaignTemplate
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Platform,
+			&i.CpmRate,
+			&i.TotalBudget,
+			&i.MaxClipsPerClipper,
+			&i.MinViewsPerClip,
+			&i.AutoApproveHours,
+			&i.DescriptionTemplate,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1289,6 +1490,47 @@ func (q *Queries) ListLedgerEntriesByClipper(ctx context.Context, clipperID pgty
 			&i.Amount,
 			&i.Description,
 			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNotificationsByUser = `-- name: ListNotificationsByUser :many
+SELECT id, user_id, type, title, body, link, is_read, created_at FROM notifications WHERE user_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListNotificationsByUserParams struct {
+	UserID string `json:"user_id"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+}
+
+func (q *Queries) ListNotificationsByUser(ctx context.Context, arg ListNotificationsByUserParams) ([]Notification, error) {
+	rows, err := q.db.Query(ctx, listNotificationsByUser, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Notification
+	for rows.Next() {
+		var i Notification
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Type,
+			&i.Title,
+			&i.Body,
+			&i.Link,
+			&i.IsRead,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -1705,7 +1947,7 @@ func (q *Queries) ListSubmissionsByUser(ctx context.Context, clipperID string) (
 
 const listUsers = `-- name: ListUsers :many
 
-SELECT id, email, display_name, role, created_at, updated_at, upi_id FROM users
+SELECT id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -1733,6 +1975,8 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.UpiID,
+			&i.AvatarUrl,
+			&i.Bio,
 		); err != nil {
 			return nil, err
 		}
@@ -1792,6 +2036,29 @@ func (q *Queries) ListUsersWithManyFlags(ctx context.Context, dollar_1 int32) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const markAllNotificationsRead = `-- name: MarkAllNotificationsRead :exec
+UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false
+`
+
+func (q *Queries) MarkAllNotificationsRead(ctx context.Context, userID string) error {
+	_, err := q.db.Exec(ctx, markAllNotificationsRead, userID)
+	return err
+}
+
+const markNotificationRead = `-- name: MarkNotificationRead :exec
+UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2
+`
+
+type MarkNotificationReadParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID string      `json:"user_id"`
+}
+
+func (q *Queries) MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) error {
+	_, err := q.db.Exec(ctx, markNotificationRead, arg.ID, arg.UserID)
+	return err
 }
 
 const sumEarningsByClipper = `-- name: SumEarningsByClipper :one
@@ -2122,7 +2389,7 @@ SET display_name = COALESCE($2, display_name),
     email = COALESCE($3, email),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, display_name, role, created_at, updated_at, upi_id
+RETURNING id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio
 `
 
 type UpdateUserParams struct {
@@ -2142,6 +2409,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UpiID,
+		&i.AvatarUrl,
+		&i.Bio,
 	)
 	return i, err
 }
@@ -2150,7 +2419,7 @@ const updateUserRole = `-- name: UpdateUserRole :one
 UPDATE users
 SET role = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, display_name, role, created_at, updated_at, upi_id
+RETURNING id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio
 `
 
 type UpdateUserRoleParams struct {
@@ -2169,13 +2438,15 @@ func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UpiID,
+		&i.AvatarUrl,
+		&i.Bio,
 	)
 	return i, err
 }
 
 const updateUserUPI = `-- name: UpdateUserUPI :one
 
-UPDATE users SET upi_id = $2, updated_at = NOW() WHERE id = $1 RETURNING id, email, display_name, role, created_at, updated_at, upi_id
+UPDATE users SET upi_id = $2, updated_at = NOW() WHERE id = $1 RETURNING id, email, display_name, role, created_at, updated_at, upi_id, avatar_url, bio
 `
 
 type UpdateUserUPIParams struct {
@@ -2195,6 +2466,56 @@ func (q *Queries) UpdateUserUPI(ctx context.Context, arg UpdateUserUPIParams) (U
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.UpiID,
+		&i.AvatarUrl,
+		&i.Bio,
+	)
+	return i, err
+}
+
+const upsertSocialAccount = `-- name: UpsertSocialAccount :one
+INSERT INTO social_accounts (user_id, platform, platform_user_id, platform_username, access_token, refresh_token, token_expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (platform, platform_user_id) DO UPDATE SET
+    platform_username = EXCLUDED.platform_username,
+    access_token = EXCLUDED.access_token,
+    refresh_token = EXCLUDED.refresh_token,
+    token_expires_at = EXCLUDED.token_expires_at,
+    updated_at = NOW()
+RETURNING id, user_id, platform, platform_user_id, platform_username, access_token, refresh_token, token_expires_at, created_at, updated_at
+`
+
+type UpsertSocialAccountParams struct {
+	UserID           string             `json:"user_id"`
+	Platform         string             `json:"platform"`
+	PlatformUserID   string             `json:"platform_user_id"`
+	PlatformUsername pgtype.Text        `json:"platform_username"`
+	AccessToken      pgtype.Text        `json:"access_token"`
+	RefreshToken     pgtype.Text        `json:"refresh_token"`
+	TokenExpiresAt   pgtype.Timestamptz `json:"token_expires_at"`
+}
+
+func (q *Queries) UpsertSocialAccount(ctx context.Context, arg UpsertSocialAccountParams) (SocialAccount, error) {
+	row := q.db.QueryRow(ctx, upsertSocialAccount,
+		arg.UserID,
+		arg.Platform,
+		arg.PlatformUserID,
+		arg.PlatformUsername,
+		arg.AccessToken,
+		arg.RefreshToken,
+		arg.TokenExpiresAt,
+	)
+	var i SocialAccount
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Platform,
+		&i.PlatformUserID,
+		&i.PlatformUsername,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.TokenExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

@@ -138,6 +138,8 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		submissionSvc := service.NewSubmissionService(deps.DB.Queries)
 		submissionSvc.WithLedger(service.NewLedgerService(deps.DB.Queries))
+		notifSvc := service.NewNotificationService(deps.DB.Queries)
+		submissionSvc.WithNotifications(notifSvc)
 		handlers.RegisterSubmissionHandlers(authenticatedAPI, submissionSvc)
 	}
 
@@ -153,6 +155,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	if deps.DB != nil {
 		payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
+		payoutSvc.WithNotifications(service.NewNotificationService(deps.DB.Queries))
 		handlers.RegisterPayoutHandlers(authenticatedAPI, payoutSvc)
 	}
 
@@ -163,6 +166,24 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		adminGroup.Use(auth.AdminOnly)
 		adminAPI := humachi.New(adminGroup, authCfg)
 		handlers.RegisterAdminHandlers(adminAPI, deps.DB.Queries, auditSvc, fraudSvc)
+	}
+
+	// --- Notification handlers (authenticated) ---
+	if deps.DB != nil {
+		notifSvc := service.NewNotificationService(deps.DB.Queries)
+		handlers.RegisterNotificationHandlers(authenticatedAPI, notifSvc)
+	}
+
+	// --- Social account handlers (authenticated) ---
+	if deps.DB != nil {
+		socialAccountSvc := service.NewSocialAccountService(deps.DB.Queries)
+		handlers.RegisterSocialAccountHandlers(authenticatedAPI, socialAccountSvc)
+	}
+
+	// --- Template handlers (public GET + admin POST) ---
+	if deps.DB != nil {
+		templateSvc := service.NewTemplateService(deps.DB.Queries)
+		handlers.RegisterTemplateHandlers(api, templateSvc)
 	}
 
 	return r

@@ -18,26 +18,34 @@ type Querier interface {
 	CountSnapshotsBySubmission(ctx context.Context, submissionID pgtype.UUID) (int64, error)
 	CountSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error)
 	CountSubmissionsByClipperForCampaign(ctx context.Context, arg CountSubmissionsByClipperForCampaignParams) (int64, error)
+	CountUnreadNotifications(ctx context.Context, userID string) (int64, error)
 	CountUsers(ctx context.Context) (int32, error)
 	// Audit Logs
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
+	CreateCampaignTemplate(ctx context.Context, arg CreateCampaignTemplateParams) (CampaignTemplate, error)
 	// Fraud Flags
 	CreateFraudFlag(ctx context.Context, arg CreateFraudFlagParams) (FraudFlag, error)
 	CreateLedgerEntry(ctx context.Context, arg CreateLedgerEntryParams) (LedgerEntry, error)
 	CreateMetricSnapshot(ctx context.Context, arg CreateMetricSnapshotParams) (MetricSnapshot, error)
+	// Notification queries
+	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreatePayoutRequest(ctx context.Context, arg CreatePayoutRequestParams) (PayoutRequest, error)
 	CreateSocialAccount(ctx context.Context, arg CreateSocialAccountParams) (SocialAccount, error)
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (Submission, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeductCampaignBudget(ctx context.Context, arg DeductCampaignBudgetParams) (Campaign, error)
+	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
 	DeleteSocialAccount(ctx context.Context, arg DeleteSocialAccountParams) error
 	GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign, error)
+	GetCampaignTemplateByID(ctx context.Context, id pgtype.UUID) (CampaignTemplate, error)
 	GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (FraudFlag, error)
 	GetInitialSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error)
 	GetLatestSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error)
 	GetLedgerEntryByIdempotencyKey(ctx context.Context, idempotencyKey string) (LedgerEntry, error)
 	GetPayoutRequestByID(ctx context.Context, id pgtype.UUID) (PayoutRequest, error)
+	// Social account queries
+	GetSocialAccountByPlatformAndUser(ctx context.Context, arg GetSocialAccountByPlatformAndUserParams) (SocialAccount, error)
 	GetSubmissionByID(ctx context.Context, id pgtype.UUID) (Submission, error)
 	GetSubmissionWithCampaign(ctx context.Context, id pgtype.UUID) (GetSubmissionWithCampaignRow, error)
 	GetSubmissionsNeedingVerification(ctx context.Context, limit int32) ([]GetSubmissionsNeedingVerificationRow, error)
@@ -47,11 +55,14 @@ type Querier interface {
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListAuditLogsByActor(ctx context.Context, arg ListAuditLogsByActorParams) ([]AuditLog, error)
 	ListAuditLogsByResource(ctx context.Context, arg ListAuditLogsByResourceParams) ([]AuditLog, error)
+	// Campaign template queries
+	ListCampaignTemplates(ctx context.Context) ([]CampaignTemplate, error)
 	ListCampaignsByOwner(ctx context.Context, ownerID string) ([]Campaign, error)
 	ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFilteredParams) ([]Campaign, error)
 	ListFraudFlagsByUser(ctx context.Context, userID pgtype.Text) ([]FraudFlag, error)
 	ListLedgerEntriesByCampaign(ctx context.Context, campaignID pgtype.UUID) ([]LedgerEntry, error)
 	ListLedgerEntriesByClipper(ctx context.Context, clipperID pgtype.Text) ([]LedgerEntry, error)
+	ListNotificationsByUser(ctx context.Context, arg ListNotificationsByUserParams) ([]Notification, error)
 	ListOpenFraudFlags(ctx context.Context) ([]FraudFlag, error)
 	ListPayoutRequestsByClipper(ctx context.Context, clipperID string) ([]PayoutRequest, error)
 	ListPayoutsByUser(ctx context.Context, clipperID string) ([]PayoutRequest, error)
@@ -65,6 +76,8 @@ type Querier interface {
 	// Admin user queries
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersWithManyFlags(ctx context.Context, dollar_1 int32) ([]ListUsersWithManyFlagsRow, error)
+	MarkAllNotificationsRead(ctx context.Context, userID string) error
+	MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) error
 	SumEarningsByClipper(ctx context.Context, clipperID pgtype.Text) (int64, error)
 	SumEarningsByClipperForCampaign(ctx context.Context, arg SumEarningsByClipperForCampaignParams) (int64, error)
 	SumFeesByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error)
@@ -80,6 +93,7 @@ type Querier interface {
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) (User, error)
 	// Payout queries
 	UpdateUserUPI(ctx context.Context, arg UpdateUserUPIParams) (User, error)
+	UpsertSocialAccount(ctx context.Context, arg UpsertSocialAccountParams) (SocialAccount, error)
 }
 
 var _ Querier = (*Queries)(nil)

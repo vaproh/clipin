@@ -45,9 +45,10 @@ type CampaignListResult struct {
 
 // CampaignService implements campaign marketplace business logic.
 type CampaignService struct {
-	store  CampaignStore
-	cache  *CampaignCache
-	ledger *LedgerService
+	store         CampaignStore
+	cache         *CampaignCache
+	ledger        *LedgerService
+	notifications *NotificationService
 }
 
 func NewCampaignService(store CampaignStore, cache *CampaignCache) *CampaignService {
@@ -57,6 +58,11 @@ func NewCampaignService(store CampaignStore, cache *CampaignCache) *CampaignServ
 // WithLedger attaches a ledger service for recording financial entries.
 func (s *CampaignService) WithLedger(ledger *LedgerService) {
 	s.ledger = ledger
+}
+
+// WithNotifications attaches a notification service for sending in-app notifications.
+func (s *CampaignService) WithNotifications(notifications *NotificationService) {
+	s.notifications = notifications
 }
 
 // ListPublic returns a paginated, filtered list of active campaigns.

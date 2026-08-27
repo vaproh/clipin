@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, Check, Rocket } from 'lucide-vue-next'
-import type { CreateCampaignBody } from '~/composables/useApi'
+import { ArrowLeft, ArrowRight, Check, FileText, Plus, Rocket } from 'lucide-vue-next'
+import type { CampaignTemplate, CreateCampaignBody } from '~/composables/useApi'
 import { formatPaise } from '~/lib/utils'
 
 definePageMeta({
@@ -82,6 +82,25 @@ function launchCampaign() {
 }
 
 const stepLabels = ['Basics', 'Budget & Rules', 'Review']
+
+// Template selection
+const { data: templates, isLoading: templatesLoading } = useTemplates()
+const selectedTemplate = ref<CampaignTemplate | null>(null)
+
+function applyTemplate(template: CampaignTemplate) {
+  selectedTemplate.value = template
+  form.platform = template.platform
+  form.cpm_rate = template.cpm_rate
+  form.total_budget = template.total_budget
+  form.max_clips_per_clipper = template.max_clips_per_clipper
+  form.min_views_per_clip = template.min_views_per_clip
+  form.auto_approve_hours = template.auto_approve_hours
+  if (template.description_template) form.description = template.description_template
+}
+
+function clearTemplate() {
+  selectedTemplate.value = null
+}
 </script>
 
 <template>
@@ -133,6 +152,82 @@ const stepLabels = ['Basics', 'Budget & Rules', 'Review']
 
     <!-- Step 1: Basics -->
     <div v-if="step === 1" class="rounded bg-neutral-950 border border-neutral-800 p-5 space-y-5">
+      <!-- Template selector -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-mono text-neutral-400">Start from template</span>
+          <button
+            v-if="selectedTemplate"
+            class="text-xs font-mono text-neutral-500 hover:text-white transition-colors"
+            @click="clearTemplate"
+          >
+            Clear
+          </button>
+        </div>
+
+        <!-- Loading state -->
+        <div v-if="templatesLoading" class="text-xs font-mono text-neutral-500 py-2">
+          Loading templates...
+        </div>
+
+        <!-- Template cards -->
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <!-- Start from scratch -->
+          <button
+            type="button"
+            :class="[
+              'flex items-center gap-3 rounded p-3 text-left transition-colors',
+              !selectedTemplate
+                ? 'border border-white bg-neutral-900'
+                : 'border border-dashed border-neutral-700 hover:border-neutral-500',
+            ]"
+            @click="clearTemplate"
+          >
+            <div class="w-8 h-8 rounded flex items-center justify-center bg-neutral-800 shrink-0">
+              <Plus class="w-4 h-4 text-neutral-400" />
+            </div>
+            <div>
+              <div class="text-xs font-mono text-white">Start from scratch</div>
+              <div class="text-[11px] font-mono text-neutral-500">Blank campaign</div>
+            </div>
+          </button>
+
+          <!-- Template cards -->
+          <button
+            v-for="tpl in templates"
+            :key="tpl.id"
+            type="button"
+            :class="[
+              'flex items-center gap-3 rounded p-3 text-left transition-colors',
+              selectedTemplate?.id === tpl.id
+                ? 'border border-white bg-neutral-900'
+                : 'border border-neutral-800 hover:border-neutral-600',
+            ]"
+            @click="applyTemplate(tpl)"
+          >
+            <div class="w-8 h-8 rounded flex items-center justify-center bg-neutral-800 shrink-0">
+              <FileText class="w-4 h-4 text-neutral-400" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs font-mono text-white truncate">{{ tpl.name }}</div>
+              <div class="text-[11px] font-mono text-neutral-500">
+                {{ tpl.platform }} · {{ formatPaise(tpl.cpm_rate) }}/k
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Active template badge -->
+        <div
+          v-if="selectedTemplate"
+          class="inline-flex items-center gap-1.5 rounded-full border border-neutral-700 bg-neutral-900 px-2.5 py-1"
+        >
+          <span class="text-[11px] font-mono text-neutral-400">Template:</span>
+          <span class="text-[11px] font-mono text-white">{{ selectedTemplate.name }}</span>
+        </div>
+      </div>
+
+      <div class="h-px bg-neutral-800" />
       <div class="space-y-1.5">
         <UiLabel for="title" class="text-xs font-mono text-neutral-400">Title</UiLabel>
         <UiInput

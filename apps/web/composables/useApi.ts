@@ -668,6 +668,33 @@ export function useCampaignAnalytics(campaignId: Ref<string>) {
 }
 
 // ---------------------------------------------------------------------------
+// Templates
+// ---------------------------------------------------------------------------
+
+export interface CampaignTemplate {
+  id: string
+  name: string
+  platform: 'youtube' | 'instagram' | 'tiktok' | 'multi'
+  cpm_rate: number
+  total_budget: number
+  max_clips_per_clipper: number
+  min_views_per_clip: number
+  auto_approve_hours: number
+  description_template: string | null
+  created_at: string
+}
+
+/** Fetch all campaign templates. */
+export function useTemplates() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['templates'],
+    queryFn: () => fetchApi<CampaignTemplate[]>('/templates'),
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
 

@@ -1,3 +1,7 @@
+import { resolve } from 'path'
+
+const e2e = !!process.env.E2E_TEST
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
@@ -6,6 +10,30 @@ export default defineNuxtConfig({
   experimental: {
     appManifest: false,
   },
+
+  alias: e2e
+    ? {
+        '@clerk/nuxt': resolve(__dirname, 'e2e/clerk-stub.ts'),
+        '@clerk/vue': resolve(__dirname, 'e2e/clerk-stub.ts'),
+      }
+    : {},
+
+  imports: e2e
+    ? {
+        presets: [
+          {
+            from: resolve(__dirname, 'e2e/clerk-stub.ts'),
+            imports: ['useAuth', 'useUser', 'useClerk', 'useSignIn', 'useSignUp'],
+          },
+        ],
+      }
+    : undefined,
+
+  components: e2e
+    ? {
+        dirs: [{ path: resolve(__dirname, 'e2e/components'), pathPrefix: false }],
+      }
+    : undefined,
 
   site: {
     url: process.env.NUXT_PUBLIC_SITE_URL || 'https://clipin.in',

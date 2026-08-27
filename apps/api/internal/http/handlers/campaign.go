@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -360,10 +361,10 @@ func RegisterCampaignOwnerHandlers(api huma.API, svc CampaignServiceInterface) {
 			if ve, ok := err.(*service.ValidationError); ok {
 				return nil, huma.Error422UnprocessableEntity(ve.Error())
 			}
-			if err == service.ErrCampaignNotFound {
+			if errors.Is(err, service.ErrCampaignNotFound) {
 				return nil, huma.Error404NotFound("campaign not found")
 			}
-			if err == service.ErrNotOwner {
+			if errors.Is(err, service.ErrNotOwner) {
 				return nil, huma.Error403Forbidden("not campaign owner")
 			}
 			return nil, huma.Error500InternalServerError(err.Error())
@@ -393,10 +394,10 @@ func RegisterCampaignOwnerHandlers(api huma.API, svc CampaignServiceInterface) {
 		}
 		campaign, err := svc.Pause(ctx, user.ID, campaignID)
 		if err != nil {
-			if err == service.ErrCampaignNotFound {
+			if errors.Is(err, service.ErrCampaignNotFound) {
 				return nil, huma.Error404NotFound("campaign not found")
 			}
-			if err == service.ErrNotOwner {
+			if errors.Is(err, service.ErrNotOwner) {
 				return nil, huma.Error403Forbidden("not campaign owner")
 			}
 			return nil, huma.Error409Conflict(err.Error())
@@ -425,10 +426,10 @@ func RegisterCampaignOwnerHandlers(api huma.API, svc CampaignServiceInterface) {
 		}
 		campaign, err := svc.Resume(ctx, user.ID, campaignID)
 		if err != nil {
-			if err == service.ErrCampaignNotFound {
+			if errors.Is(err, service.ErrCampaignNotFound) {
 				return nil, huma.Error404NotFound("campaign not found")
 			}
-			if err == service.ErrNotOwner {
+			if errors.Is(err, service.ErrNotOwner) {
 				return nil, huma.Error403Forbidden("not campaign owner")
 			}
 			return nil, huma.Error409Conflict(err.Error())
@@ -457,10 +458,10 @@ func RegisterCampaignOwnerHandlers(api huma.API, svc CampaignServiceInterface) {
 		}
 		campaign, err := svc.Cancel(ctx, user.ID, campaignID)
 		if err != nil {
-			if err == service.ErrCampaignNotFound {
+			if errors.Is(err, service.ErrCampaignNotFound) {
 				return nil, huma.Error404NotFound("campaign not found")
 			}
-			if err == service.ErrNotOwner {
+			if errors.Is(err, service.ErrNotOwner) {
 				return nil, huma.Error403Forbidden("not campaign owner")
 			}
 			return nil, huma.Error409Conflict(err.Error())

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -93,18 +94,18 @@ func RegisterSubmissionHandlers(api huma.API, svc SubmissionServiceInterface) {
 			if ve, ok := err.(*service.ValidationError); ok {
 				return nil, huma.Error422UnprocessableEntity(ve.Error())
 			}
-			switch err {
-			case service.ErrCampaignNotFound:
+			switch {
+			case errors.Is(err, service.ErrCampaignNotFound):
 				return nil, huma.Error404NotFound("campaign not found")
-			case service.ErrCampaignNotActive:
+			case errors.Is(err, service.ErrCampaignNotActive):
 				return nil, huma.Error409Conflict("campaign is not active")
-			case service.ErrDuplicateSubmission:
+			case errors.Is(err, service.ErrDuplicateSubmission):
 				return nil, huma.Error409Conflict("duplicate submission: you have already submitted this URL")
-			case service.ErrClipperLimitExceeded:
+			case errors.Is(err, service.ErrClipperLimitExceeded):
 				return nil, huma.Error409Conflict("submission limit reached for this campaign")
-			case service.ErrPlatformMismatch:
+			case errors.Is(err, service.ErrPlatformMismatch):
 				return nil, huma.Error422UnprocessableEntity("platform does not match campaign")
-			case service.ErrInvalidURL:
+			case errors.Is(err, service.ErrInvalidURL):
 				return nil, huma.Error422UnprocessableEntity("invalid post URL")
 			}
 			return nil, huma.Error500InternalServerError("failed to create submission")
@@ -138,10 +139,10 @@ func RegisterSubmissionHandlers(api huma.API, svc SubmissionServiceInterface) {
 
 		// Verify the user owns this campaign.
 		if err := svc.VerifyCampaignOwnership(ctx, campaignID, user.ID); err != nil {
-			if err == service.ErrCampaignNotFound {
+			if errors.Is(err, service.ErrCampaignNotFound) {
 				return nil, huma.Error404NotFound("campaign not found")
 			}
-			if err == service.ErrNotOwner {
+			if errors.Is(err, service.ErrNotOwner) {
 				return nil, huma.Error403Forbidden("not campaign owner")
 			}
 			return nil, huma.Error500InternalServerError("failed to verify ownership")
@@ -210,12 +211,12 @@ func RegisterSubmissionHandlers(api huma.API, svc SubmissionServiceInterface) {
 
 		submission, err := svc.Approve(ctx, submissionID, user.ID)
 		if err != nil {
-			switch err {
-			case service.ErrSubmissionNotFound:
+			switch {
+			case errors.Is(err, service.ErrSubmissionNotFound):
 				return nil, huma.Error404NotFound("submission not found")
-			case service.ErrNotOwner:
+			case errors.Is(err, service.ErrNotOwner):
 				return nil, huma.Error403Forbidden("not campaign owner")
-			case service.ErrSubmissionNotPending:
+			case errors.Is(err, service.ErrSubmissionNotPending):
 				return nil, huma.Error409Conflict("submission is not pending")
 			}
 			return nil, huma.Error500InternalServerError("failed to approve submission")
@@ -252,12 +253,12 @@ func RegisterSubmissionHandlers(api huma.API, svc SubmissionServiceInterface) {
 
 		submission, err := svc.Reject(ctx, submissionID, user.ID, input.Body.Reason)
 		if err != nil {
-			switch err {
-			case service.ErrSubmissionNotFound:
+			switch {
+			case errors.Is(err, service.ErrSubmissionNotFound):
 				return nil, huma.Error404NotFound("submission not found")
-			case service.ErrNotOwner:
+			case errors.Is(err, service.ErrNotOwner):
 				return nil, huma.Error403Forbidden("not campaign owner")
-			case service.ErrSubmissionNotPending:
+			case errors.Is(err, service.ErrSubmissionNotPending):
 				return nil, huma.Error409Conflict("submission is not pending")
 			}
 			return nil, huma.Error500InternalServerError("failed to reject submission")

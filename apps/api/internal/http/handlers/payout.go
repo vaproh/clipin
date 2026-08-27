@@ -98,6 +98,10 @@ func toPayoutRequestItem(p sqlc.PayoutRequest) payoutRequestItem {
 	return item
 }
 
+type requestPayoutOutput struct {
+	Body payoutRequestItem
+}
+
 type listPayoutsOutput struct {
 	Body struct {
 		Payouts []payoutRequestItem `json:"payouts"`
@@ -137,7 +141,7 @@ func RegisterPayoutHandlers(api huma.API, svc PayoutServiceInterface) {
 		Summary:     "Request payout",
 		Description: "Creates a payout request. Requires UPI ID to be set and sufficient available balance.",
 		Tags:        []string{"Payouts"},
-	}, func(ctx context.Context, input *requestPayoutInput) (*payoutRequestItem, error) {
+	}, func(ctx context.Context, input *requestPayoutInput) (*requestPayoutOutput, error) {
 		user, err := requireUser(ctx)
 		if err != nil {
 			return nil, err
@@ -165,7 +169,8 @@ func RegisterPayoutHandlers(api huma.API, svc PayoutServiceInterface) {
 			}
 		}
 		item := toPayoutRequestItem(*pr)
-		return &item, nil
+		resp := &requestPayoutOutput{Body: item}
+		return resp, nil
 	})
 
 	// GET /me/payouts - List my payouts

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle, BarChart3, Receipt } from 'lucide-vue-next'
+import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle, BarChart3, Receipt, LineChart } from 'lucide-vue-next'
 import { formatPaise, platformLabel } from '~/lib/utils'
 
 definePageMeta({
@@ -29,6 +29,9 @@ const { mutate: resumeCampaign, isPending: resuming } = useResumeCampaign(id)
 const { mutate: cancelCampaign, isPending: cancelling } = useCancelCampaign(id)
 
 const actionLoading = computed(() => pausing.value || resuming.value || cancelling.value)
+
+// Owner analytics
+const { data: campaignAnalytics, isLoading: analyticsLoading } = useCampaignAnalytics(id)
 
 // Owner ledger
 const { data: campaignLedger, isLoading: ledgerLoading } = useCampaignLedger(id)
@@ -238,6 +241,24 @@ function relativeDate(dateStr: string | null): string {
               <p class="text-xs text-neutral-500">No ledger entries yet.</p>
             </div>
           </template>
+        </div>
+      </template>
+
+      <!-- Owner: analytics -->
+      <template v-if="isOwner">
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <LineChart class="w-4 h-4 text-neutral-500" />
+            <h3 class="text-sm font-semibold text-white">Analytics</h3>
+          </div>
+
+          <SharedLoadingSpinner v-if="analyticsLoading" />
+
+          <CampaignCampaignAnalytics
+            v-else-if="campaignAnalytics"
+            :analytics="campaignAnalytics"
+            :total-budget="campaign.total_budget"
+          />
         </div>
       </template>
 

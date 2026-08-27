@@ -135,7 +135,16 @@ const { data: earnings } = useMyEarnings()
                   <span>{{ formatPaise(campaign.remaining_budget) }} remaining</span>
                 </div>
               </div>
-              <ArrowRight class="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+              <div class="flex items-center gap-2 shrink-0">
+                <NuxtLink
+                  :to="`/app/campaigns/${campaign.id}#analytics`"
+                  class="text-[11px] font-mono text-neutral-500 hover:text-white transition-colors"
+                  @click.stop
+                >
+                  Analytics
+                </NuxtLink>
+                <ArrowRight class="w-3.5 h-3.5 text-neutral-500" />
+              </div>
             </div>
           </NuxtLink>
 

@@ -584,6 +584,46 @@ export function useDisconnectSocialAccount() {
 }
 
 // ---------------------------------------------------------------------------
+// Campaign Analytics
+// ---------------------------------------------------------------------------
+
+export interface CampaignAnalytics {
+  submissions: {
+    total: number
+    pending: number
+    approved: number
+    rejected: number
+    unique_clippers: number
+  }
+  views: {
+    total_views: number
+    total_likes: number
+    total_comments: number
+    total_shares: number
+  }
+  financial: {
+    total_earnings: number
+    total_fees: number
+    total_refunds: number
+  }
+  progress: {
+    budget_consumed_pct: number
+    time_remaining: string | null
+  }
+}
+
+/** Fetch analytics for a campaign (owner view). */
+export function useCampaignAnalytics(campaignId: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['campaignAnalytics', campaignId],
+    queryFn: () => fetchApi<CampaignAnalytics>(`/me/campaigns/${campaignId.value}/analytics`),
+    enabled: () => !!campaignId.value,
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
 

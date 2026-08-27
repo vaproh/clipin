@@ -17,7 +17,7 @@ type FraudStore interface {
 	GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (sqlc.FraudFlag, error)
 	UpdateFraudFlagStatus(ctx context.Context, arg sqlc.UpdateFraudFlagStatusParams) (sqlc.FraudFlag, error)
 	CountFraudFlagsByUser(ctx context.Context, userID pgtype.Text) (int32, error)
-	ListUsersWithManyFlags(ctx context.Context, id pgtype.UUID) ([]sqlc.ListUsersWithManyFlagsRow, error)
+	ListUsersWithManyFlags(ctx context.Context, dollar_1 int32) ([]sqlc.ListUsersWithManyFlagsRow, error)
 }
 
 // FraudService implements fraud detection and flagging.
@@ -125,5 +125,5 @@ func (s *FraudService) GetUserFlagCount(ctx context.Context, userID string) (int
 
 // GetHighRiskUsers returns users with at least minFlags open flags.
 func (s *FraudService) GetHighRiskUsers(ctx context.Context, minFlags int32) ([]sqlc.ListUsersWithManyFlagsRow, error) {
-	return s.store.ListUsersWithManyFlags(ctx, pgtype.UUID{Bytes: [16]byte{}, Valid: true})
+	return s.store.ListUsersWithManyFlags(ctx, minFlags)
 }

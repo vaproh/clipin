@@ -24,7 +24,7 @@ func StartPayoutProcessorWorker(ctx context.Context, svc *service.PayoutService,
 				log.Println("payout processor worker stopped")
 				return
 			case <-ticker.C:
-				count, err := svc.ProcessPendingPayouts(context.Background())
+				count, err := svc.ProcessPendingPayouts(ctx)
 				if err != nil {
 					log.Printf("payout processor worker error: %v", err)
 				} else if count > 0 {

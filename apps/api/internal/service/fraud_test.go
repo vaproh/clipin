@@ -18,7 +18,7 @@ type mockFraudStore struct {
 	getByID       func(ctx context.Context, id pgtype.UUID) (sqlc.FraudFlag, error)
 	updateStatus  func(ctx context.Context, arg sqlc.UpdateFraudFlagStatusParams) (sqlc.FraudFlag, error)
 	countByUser   func(ctx context.Context, userID pgtype.Text) (int32, error)
-	listHighRisk  func(ctx context.Context, id pgtype.UUID) ([]sqlc.ListUsersWithManyFlagsRow, error)
+	listHighRisk  func(ctx context.Context, minFlags int32) ([]sqlc.ListUsersWithManyFlagsRow, error)
 }
 
 func (m *mockFraudStore) CreateFraudFlag(ctx context.Context, arg sqlc.CreateFraudFlagParams) (sqlc.FraudFlag, error) {
@@ -56,9 +56,9 @@ func (m *mockFraudStore) CountFraudFlagsByUser(ctx context.Context, userID pgtyp
 	return 0, nil
 }
 
-func (m *mockFraudStore) ListUsersWithManyFlags(ctx context.Context, id pgtype.UUID) ([]sqlc.ListUsersWithManyFlagsRow, error) {
+func (m *mockFraudStore) ListUsersWithManyFlags(ctx context.Context, minFlags int32) ([]sqlc.ListUsersWithManyFlagsRow, error) {
 	if m.listHighRisk != nil {
-		return m.listHighRisk(ctx, id)
+		return m.listHighRisk(ctx, minFlags)
 	}
 	return nil, nil
 }

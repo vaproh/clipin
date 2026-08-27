@@ -28,6 +28,7 @@ type Querier interface {
 	CreateSocialAccount(ctx context.Context, arg CreateSocialAccountParams) (SocialAccount, error)
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (Submission, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeductCampaignBudget(ctx context.Context, arg DeductCampaignBudgetParams) (Campaign, error)
 	DeleteSocialAccount(ctx context.Context, arg DeleteSocialAccountParams) error
 	GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign, error)
 	GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (FraudFlag, error)
@@ -61,12 +62,13 @@ type Querier interface {
 	ListSubmissionsByUser(ctx context.Context, clipperID string) ([]Submission, error)
 	// Admin user queries
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
-	ListUsersWithManyFlags(ctx context.Context, id pgtype.UUID) ([]ListUsersWithManyFlagsRow, error)
+	ListUsersWithManyFlags(ctx context.Context, dollar_1 int32) ([]ListUsersWithManyFlagsRow, error)
 	SumEarningsByClipper(ctx context.Context, clipperID pgtype.Text) (int64, error)
 	SumEarningsByClipperForCampaign(ctx context.Context, arg SumEarningsByClipperForCampaignParams) (int64, error)
 	SumFeesByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error)
 	SumPendingPayoutsByClipper(ctx context.Context, clipperID string) (int64, error)
 	SumSpendByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error)
+	UpdateCampaign(ctx context.Context, arg UpdateCampaignParams) (Campaign, error)
 	UpdateCampaignBudget(ctx context.Context, arg UpdateCampaignBudgetParams) (Campaign, error)
 	UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignStatusParams) (Campaign, error)
 	UpdateFraudFlagStatus(ctx context.Context, arg UpdateFraudFlagStatusParams) (FraudFlag, error)

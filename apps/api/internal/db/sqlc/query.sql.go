@@ -502,6 +502,46 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deductCampaignBudget = `-- name: DeductCampaignBudget :one
+UPDATE campaigns
+SET remaining_budget = remaining_budget - $2, updated_at = NOW()
+WHERE id = $1 AND remaining_budget >= $2
+RETURNING id, owner_id, title, description, brief_url, platform, status, cpm_rate, total_budget, remaining_budget, platform_fee, escrow_id, max_clips_per_campaign, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, starts_at, ends_at, created_at, updated_at
+`
+
+type DeductCampaignBudgetParams struct {
+	ID              pgtype.UUID `json:"id"`
+	RemainingBudget int32       `json:"remaining_budget"`
+}
+
+func (q *Queries) DeductCampaignBudget(ctx context.Context, arg DeductCampaignBudgetParams) (Campaign, error) {
+	row := q.db.QueryRow(ctx, deductCampaignBudget, arg.ID, arg.RemainingBudget)
+	var i Campaign
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Title,
+		&i.Description,
+		&i.BriefUrl,
+		&i.Platform,
+		&i.Status,
+		&i.CpmRate,
+		&i.TotalBudget,
+		&i.RemainingBudget,
+		&i.PlatformFee,
+		&i.EscrowID,
+		&i.MaxClipsPerCampaign,
+		&i.MaxClipsPerClipper,
+		&i.MinViewsPerClip,
+		&i.AutoApproveHours,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteSocialAccount = `-- name: DeleteSocialAccount :exec
 DELETE FROM social_accounts WHERE id = $1 AND user_id = $2
 `
@@ -1682,7 +1722,7 @@ FROM users u
 JOIN fraud_flags f ON f.user_id = u.id
 WHERE f.status = 'open'
 GROUP BY u.id
-HAVING COUNT(f.id) >= $1
+HAVING COUNT(f.id) >= $1::int
 ORDER BY COUNT(f.id) DESC
 `
 
@@ -1697,8 +1737,8 @@ type ListUsersWithManyFlagsRow struct {
 	FlagCount   int32              `json:"flag_count"`
 }
 
-func (q *Queries) ListUsersWithManyFlags(ctx context.Context, id pgtype.UUID) ([]ListUsersWithManyFlagsRow, error) {
-	rows, err := q.db.Query(ctx, listUsersWithManyFlags, id)
+func (q *Queries) ListUsersWithManyFlags(ctx context.Context, dollar_1 int32) ([]ListUsersWithManyFlagsRow, error) {
+	rows, err := q.db.Query(ctx, listUsersWithManyFlags, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -1789,6 +1829,65 @@ func (q *Queries) SumSpendByCampaign(ctx context.Context, campaignID pgtype.UUID
 	var total int64
 	err := row.Scan(&total)
 	return total, err
+}
+
+const updateCampaign = `-- name: UpdateCampaign :one
+UPDATE campaigns
+SET title = $2, description = $3, brief_url = $4, max_clips_per_campaign = $5,
+    max_clips_per_clipper = $6, min_views_per_clip = $7, auto_approve_hours = $8,
+    ends_at = $9, updated_at = NOW()
+WHERE id = $1
+RETURNING id, owner_id, title, description, brief_url, platform, status, cpm_rate, total_budget, remaining_budget, platform_fee, escrow_id, max_clips_per_campaign, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, starts_at, ends_at, created_at, updated_at
+`
+
+type UpdateCampaignParams struct {
+	ID                  pgtype.UUID        `json:"id"`
+	Title               string             `json:"title"`
+	Description         pgtype.Text        `json:"description"`
+	BriefUrl            pgtype.Text        `json:"brief_url"`
+	MaxClipsPerCampaign pgtype.Int4        `json:"max_clips_per_campaign"`
+	MaxClipsPerClipper  pgtype.Int4        `json:"max_clips_per_clipper"`
+	MinViewsPerClip     pgtype.Int4        `json:"min_views_per_clip"`
+	AutoApproveHours    pgtype.Int4        `json:"auto_approve_hours"`
+	EndsAt              pgtype.Timestamptz `json:"ends_at"`
+}
+
+func (q *Queries) UpdateCampaign(ctx context.Context, arg UpdateCampaignParams) (Campaign, error) {
+	row := q.db.QueryRow(ctx, updateCampaign,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.BriefUrl,
+		arg.MaxClipsPerCampaign,
+		arg.MaxClipsPerClipper,
+		arg.MinViewsPerClip,
+		arg.AutoApproveHours,
+		arg.EndsAt,
+	)
+	var i Campaign
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerID,
+		&i.Title,
+		&i.Description,
+		&i.BriefUrl,
+		&i.Platform,
+		&i.Status,
+		&i.CpmRate,
+		&i.TotalBudget,
+		&i.RemainingBudget,
+		&i.PlatformFee,
+		&i.EscrowID,
+		&i.MaxClipsPerCampaign,
+		&i.MaxClipsPerClipper,
+		&i.MinViewsPerClip,
+		&i.AutoApproveHours,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateCampaignBudget = `-- name: UpdateCampaignBudget :one

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ExternalLink, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-vue-next'
 import type { Submission } from '~/composables/useApi'
+import { platformLabel } from '~/lib/utils'
 
 const props = defineProps<{
   submission: Submission
@@ -20,12 +21,6 @@ const isApproved = computed(() =>
 const { data: verificationStatus } = useVerificationStatus(
   computed(() => isApproved.value && props.showVerification ? props.submission.id : '')
 )
-
-const platformLabel: Record<string, string> = {
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-}
 
 function relativeDate(dateStr: string): string {
   const date = new Date(dateStr)
@@ -51,7 +46,7 @@ function truncateUrl(url: string, max = 50): string {
       <div class="space-y-1.5 min-w-0 flex-1">
         <div class="flex items-center gap-2">
           <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800 shrink-0">
-            {{ platformLabel[submission.platform] ?? submission.platform }}
+            {{ platformLabel(submission.platform) }}
           </span>
           <SharedStatusBadge :status="submission.status" />
         </div>

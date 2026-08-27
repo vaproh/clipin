@@ -24,7 +24,7 @@ const mobileNavOpen = ref(false)
         />
       </Transition>
       <Transition name="slide">
-        <div v-if="mobileNavOpen" class="fixed inset-y-0 left-0 z-50 md:hidden">
+        <div v-if="mobileNavOpen" class="fixed inset-y-0 left-0 z-50 md:hidden" tabindex="-1" @keydown.escape="mobileNavOpen = false">
           <AppSidebar class="flex" @navigate="mobileNavOpen = false" />
         </div>
       </Transition>

@@ -10,10 +10,10 @@ const { data: profile } = useUserQuery()
 const isAdmin = computed(() => profile.value?.role === 'admin')
 
 // Stats
-const { data: stats, isLoading: statsLoading } = useAdminStats()
+const { data: stats, isLoading: statsLoading } = useAdminStats(isAdmin)
 
 // Fraud flags
-const { data: flagsData, isLoading: flagsLoading } = useAdminFraudFlags()
+const { data: flagsData, isLoading: flagsLoading } = useAdminFraudFlags(isAdmin)
 const resolveFlag = useResolveFraudFlag()
 const dismissFlag = useDismissFraudFlag()
 const resolvingId = ref<string | null>(null)
@@ -21,7 +21,7 @@ const resolutionText = ref('')
 
 // Users
 const usersPage = ref(1)
-const { data: usersData, isLoading: usersLoading } = useAdminUsers(usersPage)
+const { data: usersData, isLoading: usersLoading } = useAdminUsers(usersPage, isAdmin)
 const totalUserPages = computed(() => {
   if (!usersData.value) return 0
   return Math.ceil(usersData.value.total / 20)
@@ -29,7 +29,7 @@ const totalUserPages = computed(() => {
 
 // Audit logs
 const logsPage = ref(1)
-const { data: logsData, isLoading: logsLoading } = useAdminAuditLogs(logsPage)
+const { data: logsData, isLoading: logsLoading } = useAdminAuditLogs(logsPage, isAdmin)
 const totalLogPages = computed(() => {
   if (!logsData.value) return 0
   return Math.ceil(logsData.value.total / 20)

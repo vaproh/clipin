@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft, ExternalLink, Clock, Eye, Scissors, Timer, Send, XCircle, BarChart3, Receipt } from 'lucide-vue-next'
-import { formatPaise } from '~/lib/utils'
+import { formatPaise, platformLabel } from '~/lib/utils'
 
 definePageMeta({
   layout: 'app',
@@ -15,13 +15,6 @@ const { data: campaign, isLoading, isError } = useCampaign(id)
 const { data: user } = useUserQuery()
 
 const isOwner = computed(() => user.value && campaign.value && user.value.id === campaign.value.owner_id)
-
-const platformLabel: Record<string, string> = {
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-  multi: 'Multi',
-}
 
 const progress = computed(() => {
   if (!campaign.value) return 0
@@ -134,7 +127,7 @@ function relativeDate(dateStr: string | null): string {
           <h2 class="text-lg font-semibold tracking-tight text-white">{{ campaign.title }}</h2>
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">
-              {{ platformLabel[campaign.platform] ?? campaign.platform }}
+              {{ platformLabel(campaign.platform) }}
             </span>
             <SharedStatusBadge :status="campaign.status" />
           </div>

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 
 const faqs = [
@@ -51,6 +50,8 @@ const toggle = (idx: number) => {
           <button
             @click="toggle(idx)"
             class="w-full p-4 text-left flex items-center justify-between font-medium text-xs text-white hover:text-neutral-200 transition-colors"
+            :aria-expanded="openIdx === idx"
+            :aria-controls="`faq-panel-${idx}`"
           >
             <span>{{ faq.question }}</span>
             <ChevronDown
@@ -61,6 +62,8 @@ const toggle = (idx: number) => {
 
           <div
             v-if="openIdx === idx"
+            :id="`faq-panel-${idx}`"
+            role="region"
             class="px-4 pb-4 text-xs text-neutral-400 leading-relaxed font-normal border-t border-neutral-900 pt-3"
           >
             {{ faq.answer }}

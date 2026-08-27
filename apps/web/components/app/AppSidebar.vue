@@ -75,14 +75,14 @@ const isAdmin = computed(() => profile.value?.role === 'admin')
           :to="item.path"
           class="flex items-center justify-between px-2.5 py-2 rounded transition-colors"
           :class="[
-            route.path === item.path
+            (route.path === item.path || (item.path !== '/app' && route.path.startsWith(item.path + '/')))
               ? 'bg-neutral-900 text-white border border-neutral-800'
               : 'text-neutral-400 hover:text-white hover:bg-neutral-950'
           ]"
           @click="emit('navigate')"
         >
           <div class="flex items-center gap-2.5">
-            <component :is="item.icon" class="w-4 h-4 text-neutral-400" :class="{ 'text-white': route.path === item.path }" />
+            <component :is="item.icon" class="w-4 h-4 text-neutral-400" :class="{ 'text-white': route.path === item.path || (item.path !== '/app' && route.path.startsWith(item.path + '/')) }" />
             <span>{{ item.name }}</span>
           </div>
         </NuxtLink>

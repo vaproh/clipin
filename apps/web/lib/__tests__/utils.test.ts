@@ -29,6 +29,12 @@ describe('formatPaise', () => {
     expect(formatPaise(50)).toBe('₹1')
     expect(formatPaise(1)).toBe('₹0')
   })
+
+  it('formats negative amounts', () => {
+    expect(formatPaise(-100)).toBe('-₹1')
+    expect(formatPaise(-5000)).toBe('-₹50')
+    expect(formatPaise(-100000)).toBe('-₹1,000')
+  })
 })
 
 describe('cn', () => {

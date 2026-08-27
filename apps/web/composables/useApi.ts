@@ -577,13 +577,14 @@ export interface AdminStatsResponse {
 }
 
 /** Admin: fetch paginated users. */
-export function useAdminUsers(page: Ref<number> = ref(1)) {
+export function useAdminUsers(page: Ref<number> = ref(1), enabled?: Ref<boolean>) {
   const { fetchApi } = useApi()
 
   return useQuery({
     queryKey: ['admin', 'users', page],
     queryFn: () =>
       fetchApi<AdminUsersResponse>(`/admin/users?page=${page.value}&page_size=20`),
+    enabled: enabled ? () => enabled.value : true,
   })
 }
 
@@ -599,12 +600,13 @@ export function useAdminUser(userId: Ref<string>) {
 }
 
 /** Admin: fetch all fraud flags. */
-export function useAdminFraudFlags() {
+export function useAdminFraudFlags(enabled?: Ref<boolean>) {
   const { fetchApi } = useApi()
 
   return useQuery({
     queryKey: ['admin', 'fraud-flags'],
     queryFn: () => fetchApi<AdminFraudFlagsResponse>('/admin/fraud-flags'),
+    enabled: enabled ? () => enabled.value : true,
   })
 }
 
@@ -640,22 +642,24 @@ export function useDismissFraudFlag() {
 }
 
 /** Admin: fetch paginated audit logs. */
-export function useAdminAuditLogs(page: Ref<number> = ref(1)) {
+export function useAdminAuditLogs(page: Ref<number> = ref(1), enabled?: Ref<boolean>) {
   const { fetchApi } = useApi()
 
   return useQuery({
     queryKey: ['admin', 'audit-logs', page],
     queryFn: () =>
       fetchApi<AdminAuditLogsResponse>(`/admin/audit-logs?page=${page.value}&page_size=20`),
+    enabled: enabled ? () => enabled.value : true,
   })
 }
 
 /** Admin: fetch dashboard stats. */
-export function useAdminStats() {
+export function useAdminStats(enabled?: Ref<boolean>) {
   const { fetchApi } = useApi()
 
   return useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: () => fetchApi<AdminStatsResponse>('/admin/stats'),
+    enabled: enabled ? () => enabled.value : true,
   })
 }

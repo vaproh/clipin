@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Motion } from 'motion-v'
 import type { Campaign } from '~/composables/useApi'
-import { formatPaise } from '~/lib/utils'
+import { formatPaise, platformLabel } from '~/lib/utils'
 
 const props = defineProps<{
   campaign: Campaign
@@ -12,13 +12,6 @@ const progress = computed(() => {
   if (total_budget === 0) return 0
   return ((total_budget - remaining_budget) / total_budget) * 100
 })
-
-const platformLabel: Record<string, string> = {
-  youtube: 'YouTube',
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-  multi: 'Multi',
-}
 
 function relativeEndDate(endsAt: string | null): string {
   if (!endsAt) return 'No end date'
@@ -46,7 +39,7 @@ function relativeEndDate(endsAt: string | null): string {
           <h3 class="text-sm font-semibold text-white truncate">{{ campaign.title }}</h3>
           <div class="flex items-center gap-1.5 shrink-0">
             <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-400 border border-neutral-800">
-              {{ platformLabel[campaign.platform] ?? campaign.platform }}
+              {{ platformLabel(campaign.platform) }}
             </span>
             <SharedStatusBadge :status="campaign.status" />
           </div>

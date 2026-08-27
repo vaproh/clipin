@@ -44,6 +44,13 @@ func (c *Client) Set(ctx context.Context, key string, val []byte, ttl time.Durat
 	return c.rdb.Set(ctx, key, val, ttl).Err()
 }
 
+func (c *Client) Delete(ctx context.Context, key string) error {
+	if c.rdb == nil {
+		return fmt.Errorf("redis client is not initialized")
+	}
+	return c.rdb.Del(ctx, key).Err()
+}
+
 func (c *Client) Close() error {
 	if c.rdb != nil {
 		return c.rdb.Close()

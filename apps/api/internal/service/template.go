@@ -2,13 +2,18 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	r "clipin/apps/api/internal/redis"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const templateListCacheTTL = 300 * time.Second
 
 // TemplateStore is the persistence interface the template service requires.
 type TemplateStore interface {
@@ -23,12 +28,20 @@ type TemplateStore interface {
 // TemplateService implements campaign template business logic.
 type TemplateService struct {
 	store TemplateStore
+	redis *r.Client
 }
 
 // NewTemplateService creates a new TemplateService.
 func NewTemplateService(store TemplateStore) *TemplateService {
 	return &TemplateService{store: store}
 }
+
+// NewTemplateServiceWithCache creates a TemplateService with Redis caching.
+func NewTemplateServiceWithCache(store TemplateStore, redis *r.Client) *TemplateService {
+	return &TemplateService{store: store, redis: redis}
+}
+
+const templateListCacheKey = "templates:list"
 
 // Sentinel errors for template operations.
 var (
@@ -37,7 +50,34 @@ var (
 
 // ListTemplates returns all campaign templates.
 func (s *TemplateService) ListTemplates(ctx context.Context) ([]sqlc.CampaignTemplate, error) {
-	return s.store.ListCampaignTemplates(ctx)
+	if s.redis != nil {
+		if cached, err := s.redis.Get(ctx, templateListCacheKey); err == nil && len(cached) > 0 {
+			var templates []sqlc.CampaignTemplate
+			if json.Unmarshal(cached, &templates) == nil {
+				return templates, nil
+			}
+		}
+	}
+
+	templates, err := s.store.ListCampaignTemplates(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Best-effort cache write.
+	if s.redis != nil {
+		if data, err := json.Marshal(templates); err == nil {
+			_ = s.redis.Set(ctx, templateListCacheKey, data, templateListCacheTTL)
+		}
+	}
+
+	return templates, nil
+}
+
+func (s *TemplateService) invalidateListCache(ctx context.Context) {
+	if s.redis != nil {
+		_ = s.redis.Delete(ctx, templateListCacheKey)
+	}
 }
 
 // GetTemplateByID returns a single template by ID.
@@ -74,6 +114,7 @@ func (s *TemplateService) CreateTemplate(ctx context.Context, name, platform str
 	if err != nil {
 		return nil, fmt.Errorf("create template: %w", err)
 	}
+	s.invalidateListCache(ctx)
 	return &t, nil
 }
 
@@ -100,12 +141,17 @@ func (s *TemplateService) UpdateTemplate(ctx context.Context, id pgtype.UUID, na
 		}
 		return nil, fmt.Errorf("update template: %w", err)
 	}
+	s.invalidateListCache(ctx)
 	return &t, nil
 }
 
 // DeleteTemplate deletes a campaign template by ID.
 func (s *TemplateService) DeleteTemplate(ctx context.Context, id pgtype.UUID) error {
-	return s.store.DeleteCampaignTemplate(ctx, id)
+	err := s.store.DeleteCampaignTemplate(ctx, id)
+	if err == nil {
+		s.invalidateListCache(ctx)
+	}
+	return err
 }
 
 // CountTemplates returns the total number of templates.

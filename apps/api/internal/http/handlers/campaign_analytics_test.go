@@ -55,14 +55,14 @@ func (m *mockCampaignAnalyticsStore) GetCampaignFinancialSummary(ctx context.Con
 func analyticsRouter(store handlers.CampaignAnalyticsStore, user *sqlc.User) http.Handler {
 	r := chi.NewRouter()
 	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
-	handlers.RegisterCampaignAnalyticsHandlers(api, store)
+	handlers.RegisterCampaignAnalyticsHandlers(api, store, nil)
 	return withUser(user)(r)
 }
 
 func analyticsRouterNoAuth(store handlers.CampaignAnalyticsStore) http.Handler {
 	r := chi.NewRouter()
 	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
-	handlers.RegisterCampaignAnalyticsHandlers(api, store)
+	handlers.RegisterCampaignAnalyticsHandlers(api, store, nil)
 	return r
 }
 

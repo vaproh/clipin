@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	r "clipin/apps/api/internal/redis"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const notifUnreadCacheTTL = 15 * time.Second
 
 // NotificationStore is the persistence interface the notification service requires.
 type NotificationStore interface {
@@ -24,11 +29,21 @@ type NotificationStore interface {
 // NotificationService implements in-app notification business logic.
 type NotificationService struct {
 	store NotificationStore
+	redis *r.Client
 }
 
 // NewNotificationService creates a new NotificationService.
 func NewNotificationService(store NotificationStore) *NotificationService {
 	return &NotificationService{store: store}
+}
+
+// NewNotificationServiceWithCache creates a NotificationService with Redis caching.
+func NewNotificationServiceWithCache(store NotificationStore, redis *r.Client) *NotificationService {
+	return &NotificationService{store: store, redis: redis}
+}
+
+func notifUnreadKey(userID string) string {
+	return fmt.Sprintf("notif:unread:%s", userID)
 }
 
 // Sentinel errors for notification operations.
@@ -56,6 +71,7 @@ func (s *NotificationService) Create(ctx context.Context, userID, notifType, tit
 	if err != nil {
 		return nil, fmt.Errorf("create notification: %w", err)
 	}
+	s.invalidateUnreadCache(ctx, userID)
 	return &n, nil
 }
 
@@ -73,20 +89,52 @@ func (s *NotificationService) List(ctx context.Context, userID string, limit, of
 
 // UnreadCount returns the number of unread notifications for a user.
 func (s *NotificationService) UnreadCount(ctx context.Context, userID string) (int64, error) {
-	return s.store.CountUnreadNotifications(ctx, userID)
+	if s.redis != nil {
+		if cached, err := s.redis.Get(ctx, notifUnreadKey(userID)); err == nil && len(cached) > 0 {
+			if count, err := strconv.ParseInt(string(cached), 10, 64); err == nil {
+				return count, nil
+			}
+		}
+	}
+
+	count, err := s.store.CountUnreadNotifications(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Best-effort cache write.
+	if s.redis != nil {
+		_ = s.redis.Set(ctx, notifUnreadKey(userID), []byte(strconv.FormatInt(count, 10)), notifUnreadCacheTTL)
+	}
+
+	return count, nil
+}
+
+func (s *NotificationService) invalidateUnreadCache(ctx context.Context, userID string) {
+	if s.redis != nil {
+		_ = s.redis.Delete(ctx, notifUnreadKey(userID))
+	}
 }
 
 // MarkRead marks a single notification as read, verifying ownership.
 func (s *NotificationService) MarkRead(ctx context.Context, notificationID pgtype.UUID, userID string) error {
-	return s.store.MarkNotificationRead(ctx, sqlc.MarkNotificationReadParams{
+	err := s.store.MarkNotificationRead(ctx, sqlc.MarkNotificationReadParams{
 		ID:     notificationID,
 		UserID: userID,
 	})
+	if err == nil {
+		s.invalidateUnreadCache(ctx, userID)
+	}
+	return err
 }
 
 // MarkAllRead marks all of a user's notifications as read.
 func (s *NotificationService) MarkAllRead(ctx context.Context, userID string) error {
-	return s.store.MarkAllNotificationsRead(ctx, userID)
+	err := s.store.MarkAllNotificationsRead(ctx, userID)
+	if err == nil {
+		s.invalidateUnreadCache(ctx, userID)
+	}
+	return err
 }
 
 // Delete deletes a notification, verifying ownership.

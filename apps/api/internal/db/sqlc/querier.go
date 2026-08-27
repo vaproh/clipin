@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	ApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error)
 	AutoApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error)
+	CountCampaignTemplates(ctx context.Context) (int32, error)
 	CountCampaignsFiltered(ctx context.Context, arg CountCampaignsFilteredParams) (int64, error)
 	CountFraudFlagsByUser(ctx context.Context, userID pgtype.Text) (int32, error)
 	CountSnapshotsBySubmission(ctx context.Context, submissionID pgtype.UUID) (int64, error)
@@ -35,6 +36,7 @@ type Querier interface {
 	CreateSubmission(ctx context.Context, arg CreateSubmissionParams) (Submission, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeductCampaignBudget(ctx context.Context, arg DeductCampaignBudgetParams) (Campaign, error)
+	DeleteCampaignTemplate(ctx context.Context, id pgtype.UUID) error
 	DeleteNotification(ctx context.Context, arg DeleteNotificationParams) error
 	DeleteSocialAccount(ctx context.Context, arg DeleteSocialAccountParams) error
 	GetCampaignByID(ctx context.Context, id pgtype.UUID) (Campaign, error)
@@ -101,6 +103,7 @@ type Querier interface {
 	UpdateCampaign(ctx context.Context, arg UpdateCampaignParams) (Campaign, error)
 	UpdateCampaignBudget(ctx context.Context, arg UpdateCampaignBudgetParams) (Campaign, error)
 	UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignStatusParams) (Campaign, error)
+	UpdateCampaignTemplate(ctx context.Context, arg UpdateCampaignTemplateParams) (CampaignTemplate, error)
 	UpdateFraudFlagStatus(ctx context.Context, arg UpdateFraudFlagStatusParams) (FraudFlag, error)
 	UpdatePayoutRequestStatus(ctx context.Context, arg UpdatePayoutRequestStatusParams) (PayoutRequest, error)
 	UpdateSubmissionStatus(ctx context.Context, arg UpdateSubmissionStatusParams) (Submission, error)

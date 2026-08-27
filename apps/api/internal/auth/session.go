@@ -2,15 +2,20 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	r "clipin/apps/api/internal/redis"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const sessionUserCacheTTL = 30 * time.Second
 
 // UserStore is the subset of the user persistence layer the session
 // middleware and user handlers need. *sqlc.Queries satisfies it; tests
@@ -25,7 +30,8 @@ type UserStore interface {
 // SessionMiddleware runs after AuthMiddleware. It looks up the Clerk user in
 // the database, creating the row on first login, and stores the persisted
 // record in the context for downstream handlers.
-func SessionMiddleware(store UserStore) func(http.Handler) http.Handler {
+// When redisClient is non-nil, user lookups are cached for sessionUserCacheTTL.
+func SessionMiddleware(store UserStore, redisClient *r.Client) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID, ok := UserIDFromContext(r.Context())
@@ -34,6 +40,18 @@ func SessionMiddleware(store UserStore) func(http.Handler) http.Handler {
 			if !ok {
 				next.ServeHTTP(w, r)
 				return
+			}
+
+			// Try cache first.
+			if redisClient != nil {
+				cached, err := redisClient.Get(r.Context(), "session:user:"+userID)
+				if err == nil && len(cached) > 0 {
+					var user sqlc.User
+					if json.Unmarshal(cached, &user) == nil {
+						next.ServeHTTP(w, r.WithContext(ContextWithUser(r.Context(), &user)))
+						return
+					}
+				}
 			}
 
 			user, err := store.GetUserByID(r.Context(), userID)
@@ -56,6 +74,13 @@ func SessionMiddleware(store UserStore) func(http.Handler) http.Handler {
 					slog.Error("session: create user", "user_id", userID, "error", err)
 					http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
 					return
+				}
+			}
+
+			// Best-effort cache write.
+			if redisClient != nil {
+				if data, err := json.Marshal(user); err == nil {
+					_ = redisClient.Set(r.Context(), "session:user:"+userID, data, sessionUserCacheTTL)
 				}
 			}
 

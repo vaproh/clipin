@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	"clipin/apps/api/internal/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -49,7 +51,7 @@ type campaignAnalyticsOutput struct {
 }
 
 // RegisterCampaignAnalyticsHandlers registers the campaign analytics endpoint.
-func RegisterCampaignAnalyticsHandlers(api huma.API, store CampaignAnalyticsStore) {
+func RegisterCampaignAnalyticsHandlers(api huma.API, store CampaignAnalyticsStore, cache *service.CampaignAnalyticsCache) {
 	huma.Register(api, huma.Operation{
 		OperationID: "campaign-analytics",
 		Method:      "GET",
@@ -68,6 +70,16 @@ func RegisterCampaignAnalyticsHandlers(api huma.API, store CampaignAnalyticsStor
 		campaignID, err := parseCampaignID(input.ID)
 		if err != nil {
 			return nil, err
+		}
+
+		// Try cache (skip if not owner - we validate ownership below).
+		if cache != nil {
+			if cached, err := cache.Get(ctx, input.ID); err == nil && len(cached) > 0 {
+				var out campaignAnalyticsOutput
+				if json.Unmarshal(cached, &out) == nil {
+					return &out, nil
+				}
+			}
 		}
 
 		campaign, err := store.GetCampaignByID(ctx, campaignID)
@@ -128,6 +140,13 @@ func RegisterCampaignAnalyticsHandlers(api huma.API, store CampaignAnalyticsStor
 			if remaining > 0 {
 				s := remaining.Truncate(time.Second).String()
 				resp.Body.Progress.TimeRemaining = &s
+			}
+		}
+
+		// Best-effort cache write.
+		if cache != nil {
+			if data, err := json.Marshal(resp); err == nil {
+				_ = cache.Set(ctx, input.ID, data)
 			}
 		}
 

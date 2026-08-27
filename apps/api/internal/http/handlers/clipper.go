@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	"clipin/apps/api/internal/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -45,7 +47,7 @@ type clipperProfileOutput struct {
 }
 
 // RegisterClipperHandlers registers public clipper profile endpoints (no auth required).
-func RegisterClipperHandlers(api huma.API, store ClipperStore) {
+func RegisterClipperHandlers(api huma.API, store ClipperStore, cache *service.ClipperProfileCache) {
 	huma.Register(api, huma.Operation{
 		OperationID: "get-clipper-profile",
 		Method:      "GET",
@@ -56,6 +58,16 @@ func RegisterClipperHandlers(api huma.API, store ClipperStore) {
 	}, func(ctx context.Context, input *struct {
 		ID string `path:"id" doc:"Clipper user ID"`
 	}) (*clipperProfileOutput, error) {
+		// Try cache.
+		if cache != nil {
+			if cached, err := cache.Get(ctx, input.ID); err == nil && len(cached) > 0 {
+				var out clipperProfileOutput
+				if json.Unmarshal(cached, &out) == nil {
+					return &out, nil
+				}
+			}
+		}
+
 		profile, err := store.GetUserPublicProfile(ctx, input.ID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -117,6 +129,13 @@ func RegisterClipperHandlers(api huma.API, store ClipperStore) {
 				item.Username = &sa.PlatformUsername.String
 			}
 			resp.Body.SocialAccounts = append(resp.Body.SocialAccounts, item)
+		}
+
+		// Best-effort cache write.
+		if cache != nil {
+			if data, err := json.Marshal(resp); err == nil {
+				_ = cache.Set(ctx, input.ID, data)
+			}
 		}
 
 		return resp, nil

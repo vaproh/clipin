@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	"clipin/apps/api/internal/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -46,7 +48,7 @@ func textPtr(t pgtype.Text) *string {
 }
 
 // RegisterLeaderboardHandlers registers the public leaderboard endpoint.
-func RegisterLeaderboardHandlers(api huma.API, store LeaderboardStore) {
+func RegisterLeaderboardHandlers(api huma.API, store LeaderboardStore, cache *service.LeaderboardCache) {
 	huma.Register(api, huma.Operation{
 		OperationID: "get-leaderboard",
 		Method:      "GET",
@@ -70,6 +72,16 @@ func RegisterLeaderboardHandlers(api huma.API, store LeaderboardStore) {
 		offset := input.Offset
 		if offset < 0 {
 			offset = 0
+		}
+
+		// Try cache.
+		if cache != nil {
+			if cached, err := cache.Get(ctx, sort, limit, offset); err == nil && len(cached) > 0 {
+				var out leaderboardOutput
+				if json.Unmarshal(cached, &out) == nil {
+					return &out, nil
+				}
+			}
 		}
 
 		resp := &leaderboardOutput{}
@@ -114,6 +126,13 @@ func RegisterLeaderboardHandlers(api huma.API, store LeaderboardStore) {
 					TotalSubmissions:      row.TotalSubmissions,
 					CampaignsParticipated: &campaigns,
 				})
+			}
+		}
+
+		// Best-effort cache write.
+		if cache != nil {
+			if data, err := json.Marshal(resp); err == nil {
+				_ = cache.Set(ctx, sort, limit, offset, data)
 			}
 		}
 

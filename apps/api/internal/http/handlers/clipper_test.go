@@ -73,7 +73,7 @@ func (m *mockClipperStore) ListSocialAccountsByUserIDPublic(ctx context.Context,
 func clipperRouter(store handlers.ClipperStore) http.Handler {
 	r := chi.NewRouter()
 	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
-	handlers.RegisterClipperHandlers(api, store)
+	handlers.RegisterClipperHandlers(api, store, nil)
 	return r
 }
 

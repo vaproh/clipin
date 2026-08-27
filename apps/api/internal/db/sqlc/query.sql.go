@@ -39,6 +39,17 @@ func (q *Queries) AutoApproveSubmission(ctx context.Context, id pgtype.UUID) (in
 	return result.RowsAffected(), nil
 }
 
+const countCampaignTemplates = `-- name: CountCampaignTemplates :one
+SELECT COUNT(*)::int FROM campaign_templates
+`
+
+func (q *Queries) CountCampaignTemplates(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, countCampaignTemplates)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countCampaignsFiltered = `-- name: CountCampaignsFiltered :one
 SELECT COUNT(*) FROM campaigns
 WHERE status IN ('active', 'funded')
@@ -670,6 +681,15 @@ func (q *Queries) DeductCampaignBudget(ctx context.Context, arg DeductCampaignBu
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteCampaignTemplate = `-- name: DeleteCampaignTemplate :exec
+DELETE FROM campaign_templates WHERE id = $1
+`
+
+func (q *Queries) DeleteCampaignTemplate(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteCampaignTemplate, id)
+	return err
 }
 
 const deleteNotification = `-- name: DeleteNotification :exec
@@ -2608,6 +2628,55 @@ func (q *Queries) UpdateCampaignStatus(ctx context.Context, arg UpdateCampaignSt
 		&i.EndsAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateCampaignTemplate = `-- name: UpdateCampaignTemplate :one
+UPDATE campaign_templates
+SET name = $2, platform = $3, cpm_rate = $4, total_budget = $5,
+    max_clips_per_clipper = $6, min_views_per_clip = $7, auto_approve_hours = $8,
+    description_template = $9
+WHERE id = $1
+RETURNING id, name, platform, cpm_rate, total_budget, max_clips_per_clipper, min_views_per_clip, auto_approve_hours, description_template, created_at
+`
+
+type UpdateCampaignTemplateParams struct {
+	ID                  pgtype.UUID `json:"id"`
+	Name                string      `json:"name"`
+	Platform            string      `json:"platform"`
+	CpmRate             int32       `json:"cpm_rate"`
+	TotalBudget         int32       `json:"total_budget"`
+	MaxClipsPerClipper  pgtype.Int4 `json:"max_clips_per_clipper"`
+	MinViewsPerClip     pgtype.Int4 `json:"min_views_per_clip"`
+	AutoApproveHours    pgtype.Int4 `json:"auto_approve_hours"`
+	DescriptionTemplate pgtype.Text `json:"description_template"`
+}
+
+func (q *Queries) UpdateCampaignTemplate(ctx context.Context, arg UpdateCampaignTemplateParams) (CampaignTemplate, error) {
+	row := q.db.QueryRow(ctx, updateCampaignTemplate,
+		arg.ID,
+		arg.Name,
+		arg.Platform,
+		arg.CpmRate,
+		arg.TotalBudget,
+		arg.MaxClipsPerClipper,
+		arg.MinViewsPerClip,
+		arg.AutoApproveHours,
+		arg.DescriptionTemplate,
+	)
+	var i CampaignTemplate
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Platform,
+		&i.CpmRate,
+		&i.TotalBudget,
+		&i.MaxClipsPerClipper,
+		&i.MinViewsPerClip,
+		&i.AutoApproveHours,
+		&i.DescriptionTemplate,
+		&i.CreatedAt,
 	)
 	return i, err
 }

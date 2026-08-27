@@ -84,7 +84,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 			userStore = deps.DB.Queries
 		}
 		r.Use(auth.AuthMiddleware(auth.NewJWKSProvider(deps.Config.ClerkJWKSURL)))
-		r.Use(auth.SessionMiddleware(userStore))
+		r.Use(auth.SessionMiddleware(userStore, deps.Redis))
 	})
 
 	// --- Huma OpenAPI config ---
@@ -111,12 +111,14 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	// Clipper public profile (public endpoints)
 	if deps.DB != nil {
-		handlers.RegisterClipperHandlers(api, deps.DB.Queries)
+		clipperCache := service.NewClipperProfileCache(deps.Redis)
+		handlers.RegisterClipperHandlers(api, deps.DB.Queries, clipperCache)
 	}
 
 	// Public leaderboard (no auth)
 	if deps.DB != nil {
-		handlers.RegisterLeaderboardHandlers(api, deps.DB.Queries)
+		leaderboardCache := service.NewLeaderboardCache(deps.Redis)
+		handlers.RegisterLeaderboardHandlers(api, deps.DB.Queries, leaderboardCache)
 	}
 
 	// --- Internal API (verifier key auth) ---
@@ -146,13 +148,14 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	}
 
 	if deps.DB != nil {
-		handlers.RegisterCampaignAnalyticsHandlers(authenticatedAPI, deps.DB.Queries)
+		analyticsCache := service.NewCampaignAnalyticsCache(deps.Redis)
+		handlers.RegisterCampaignAnalyticsHandlers(authenticatedAPI, deps.DB.Queries, analyticsCache)
 	}
 
 	if deps.DB != nil {
 		submissionSvc := service.NewSubmissionService(deps.DB.Queries)
 		submissionSvc.WithLedger(service.NewLedgerService(deps.DB.Queries))
-		notifSvc := service.NewNotificationService(deps.DB.Queries)
+		notifSvc := service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis)
 		submissionSvc.WithNotifications(notifSvc)
 		handlers.RegisterSubmissionHandlers(authenticatedAPI, submissionSvc)
 	}
@@ -169,7 +172,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	if deps.DB != nil {
 		payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
-		payoutSvc.WithNotifications(service.NewNotificationService(deps.DB.Queries))
+		payoutSvc.WithNotifications(service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis))
 		handlers.RegisterPayoutHandlers(authenticatedAPI, payoutSvc)
 	}
 
@@ -184,7 +187,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	// --- Notification handlers (authenticated) ---
 	if deps.DB != nil {
-		notifSvc := service.NewNotificationService(deps.DB.Queries)
+		notifSvc := service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis)
 		handlers.RegisterNotificationHandlers(authenticatedAPI, notifSvc)
 	}
 
@@ -196,7 +199,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	// --- Template handlers (public GET + admin POST) ---
 	if deps.DB != nil {
-		templateSvc := service.NewTemplateService(deps.DB.Queries)
+		templateSvc := service.NewTemplateServiceWithCache(deps.DB.Queries, deps.Redis)
 		handlers.RegisterTemplateHandlers(api, templateSvc)
 	}
 

@@ -12,6 +12,12 @@ import (
 
 const campaignCacheTTL = 30 * time.Second
 
+// campaignCacheEntry stores both campaigns and total count together.
+type campaignCacheEntry struct {
+	Campaigns []sqlc.Campaign `json:"campaigns"`
+	Total     int64           `json:"total"`
+}
+
 // CampaignCache wraps Redis with typed cache operations for campaign listings.
 type CampaignCache struct {
 	redis *r.Client
@@ -25,28 +31,29 @@ func cacheKey(platform string, maxCpm int, minBudget int, search string, page in
 	return fmt.Sprintf("campaigns:list:%s:%d:%d:%s:%d", platform, maxCpm, minBudget, search, page)
 }
 
-// GetList returns cached campaigns for a filter+page combination, or nil on miss.
-func (cc *CampaignCache) GetList(ctx context.Context, platform string, maxCpm, minBudget int, search string, page int) ([]sqlc.Campaign, error) {
+// GetList returns cached campaigns and total count for a filter+page combination, or nil on miss.
+func (cc *CampaignCache) GetList(ctx context.Context, platform string, maxCpm, minBudget int, search string, page int) ([]sqlc.Campaign, int64, error) {
 	if cc.redis == nil {
-		return nil, nil
+		return nil, 0, nil
 	}
 	data, err := cc.redis.Get(ctx, cacheKey(platform, maxCpm, minBudget, search, page))
 	if err != nil || len(data) == 0 {
-		return nil, nil // cache miss, not an error
+		return nil, 0, nil // cache miss, not an error
 	}
-	var campaigns []sqlc.Campaign
-	if err := json.Unmarshal(data, &campaigns); err != nil {
-		return nil, nil
+	var entry campaignCacheEntry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return nil, 0, nil
 	}
-	return campaigns, nil
+	return entry.Campaigns, entry.Total, nil
 }
 
-// SetList stores campaigns for a filter+page combination.
-func (cc *CampaignCache) SetList(ctx context.Context, platform string, maxCpm, minBudget int, search string, page int, campaigns []sqlc.Campaign) error {
+// SetList stores campaigns and total count for a filter+page combination.
+func (cc *CampaignCache) SetList(ctx context.Context, platform string, maxCpm, minBudget int, search string, page int, campaigns []sqlc.Campaign, total int64) error {
 	if cc.redis == nil {
 		return nil
 	}
-	data, err := json.Marshal(campaigns)
+	entry := campaignCacheEntry{Campaigns: campaigns, Total: total}
+	data, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}

@@ -79,20 +79,10 @@ func (s *CampaignService) ListPublic(ctx context.Context, f CampaignFilters) (*C
 
 	// Try cache first (skip if no cache configured).
 	if s.cache != nil {
-		if cached, err := s.cache.GetList(ctx, f.Platform, int(f.MaxCPM), int(f.MinBudget), f.Search, f.Page); err == nil && cached != nil {
-			// Cache hit for list; we still need the count.
-			count, err := s.store.CountCampaignsFiltered(ctx, sqlc.CountCampaignsFilteredParams{
-				Column1: f.Platform,
-				Column2: f.MaxCPM,
-				Column3: f.MinBudget,
-				Column4: f.Search,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("count campaigns: %w", err)
-			}
+		if cached, cachedTotal, err := s.cache.GetList(ctx, f.Platform, int(f.MaxCPM), int(f.MinBudget), f.Search, f.Page); err == nil && cached != nil {
 			return &CampaignListResult{
 				Campaigns: cached,
-				Total:     count,
+				Total:     cachedTotal,
 				Page:      f.Page,
 				PageSize:  f.PageSize,
 			}, nil
@@ -123,7 +113,7 @@ func (s *CampaignService) ListPublic(ctx context.Context, f CampaignFilters) (*C
 
 	// Best-effort cache write.
 	if s.cache != nil {
-		_ = s.cache.SetList(ctx, f.Platform, int(f.MaxCPM), int(f.MinBudget), f.Search, f.Page, campaigns)
+		_ = s.cache.SetList(ctx, f.Platform, int(f.MaxCPM), int(f.MinBudget), f.Search, f.Page, campaigns, count)
 	}
 
 	return &CampaignListResult{

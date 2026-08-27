@@ -52,7 +52,7 @@ func (f *fakeUserStore) UpdateUserRole(ctx context.Context, arg sqlc.UpdateUserR
 }
 
 func withSession(store auth.UserStore, claims *auth.Claims) *httptest.ResponseRecorder {
-	handler := auth.SessionMiddleware(store)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := auth.SessionMiddleware(store, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -155,7 +155,7 @@ func TestSessionMiddlewareStoresUserInContext(t *testing.T) {
 	}}
 
 	var captured *sqlc.User
-	handler := auth.SessionMiddleware(store)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := auth.SessionMiddleware(store, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if u, ok := auth.UserFromContext(r.Context()); ok {
 			captured = u
 		}

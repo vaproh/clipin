@@ -40,7 +40,7 @@ func (m *mockLeaderboardStore) GetLeaderboardBySubmissions(ctx context.Context, 
 func leaderboardRouter(store handlers.LeaderboardStore) http.Handler {
 	r := chi.NewRouter()
 	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
-	handlers.RegisterLeaderboardHandlers(api, store)
+	handlers.RegisterLeaderboardHandlers(api, store, nil)
 	return r
 }
 

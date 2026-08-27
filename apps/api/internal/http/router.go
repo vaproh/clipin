@@ -109,6 +109,11 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	}
 	handlers.RegisterCampaignHandlers(api, campaignSvc)
 
+	// Clipper public profile (public endpoints)
+	if deps.DB != nil {
+		handlers.RegisterClipperHandlers(api, deps.DB.Queries)
+	}
+
 	// --- Internal API (verifier key auth) ---
 	intCfg := humaConfig
 	intCfg.OpenAPIPath = ""

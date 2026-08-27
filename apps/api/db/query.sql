@@ -330,6 +330,47 @@ ORDER BY COUNT(f.id) DESC;
 
 -- Admin user queries
 
+-- Clipper public profile queries
+
+-- name: GetUserPublicProfile :one
+SELECT id, display_name, avatar_url, bio, created_at FROM users WHERE id = $1;
+
+-- name: GetClipperSubmissionStats :one
+SELECT
+    COUNT(*)::int as total_submissions,
+    COUNT(*) FILTER (WHERE status IN ('approved', 'auto_approved'))::int as approved_submissions,
+    COUNT(*) FILTER (WHERE status = 'pending')::int as pending_submissions,
+    COUNT(*) FILTER (WHERE status = 'rejected')::int as rejected_submissions
+FROM submissions
+WHERE clipper_id = $1;
+
+-- name: GetClipperTotalViews :one
+SELECT COALESCE(SUM(ms.views), 0)::bigint as total_views
+FROM metric_snapshots ms
+JOIN submissions s ON ms.submission_id = s.id
+WHERE s.clipper_id = $1
+AND ms.id = (
+    SELECT id FROM metric_snapshots
+    WHERE submission_id = s.id
+    ORDER BY captured_at DESC
+    LIMIT 1
+);
+
+-- name: GetClipperTotalEarnings :one
+SELECT COALESCE(SUM(amount), 0)::int as total_earnings
+FROM ledger_entries
+WHERE clipper_id = $1 AND entry_type = 'earning';
+
+-- name: GetClipperCampaignCount :one
+SELECT COUNT(DISTINCT campaign_id)::int as campaigns_participated
+FROM submissions
+WHERE clipper_id = $1;
+
+-- name: ListSocialAccountsByUserIDPublic :many
+SELECT platform, platform_username FROM social_accounts WHERE user_id = $1;
+
+-- Admin user queries
+
 -- name: ListUsers :many
 SELECT * FROM users
 ORDER BY created_at DESC

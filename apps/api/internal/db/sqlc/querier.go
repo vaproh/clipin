@@ -50,6 +50,9 @@ type Querier interface {
 	GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (FraudFlag, error)
 	GetInitialSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error)
 	GetLatestSnapshotForSubmission(ctx context.Context, submissionID pgtype.UUID) (MetricSnapshot, error)
+	// Leaderboard queries
+	GetLeaderboardByEarnings(ctx context.Context, arg GetLeaderboardByEarningsParams) ([]GetLeaderboardByEarningsRow, error)
+	GetLeaderboardBySubmissions(ctx context.Context, arg GetLeaderboardBySubmissionsParams) ([]GetLeaderboardBySubmissionsRow, error)
 	GetLedgerEntryByIdempotencyKey(ctx context.Context, idempotencyKey string) (LedgerEntry, error)
 	GetPayoutRequestByID(ctx context.Context, id pgtype.UUID) (PayoutRequest, error)
 	// Social account queries

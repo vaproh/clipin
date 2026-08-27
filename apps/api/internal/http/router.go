@@ -114,6 +114,11 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		handlers.RegisterClipperHandlers(api, deps.DB.Queries)
 	}
 
+	// Public leaderboard (no auth)
+	if deps.DB != nil {
+		handlers.RegisterLeaderboardHandlers(api, deps.DB.Queries)
+	}
+
 	// --- Internal API (verifier key auth) ---
 	intCfg := humaConfig
 	intCfg.OpenAPIPath = ""

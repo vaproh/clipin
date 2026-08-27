@@ -476,3 +476,37 @@ SELECT
     COALESCE(SUM(CASE WHEN entry_type = 'refund' THEN ABS(amount) ELSE 0 END), 0)::int as total_refunds
 FROM ledger_entries
 WHERE campaign_id = $1;
+
+-- Leaderboard queries
+
+-- name: GetLeaderboardByEarnings :many
+SELECT
+    u.id,
+    u.display_name,
+    u.avatar_url,
+    COALESCE(SUM(le.amount), 0)::int as total_earnings,
+    COUNT(DISTINCT s.id)::int as total_submissions,
+    COUNT(DISTINCT s.campaign_id)::int as campaigns_participated
+FROM users u
+JOIN ledger_entries le ON le.clipper_id = u.id AND le.entry_type = 'earning'
+JOIN submissions s ON s.clipper_id = u.id AND s.status IN ('approved', 'auto_approved')
+WHERE u.role IN ('clipper', 'owner')
+GROUP BY u.id, u.display_name, u.avatar_url
+ORDER BY total_earnings DESC
+LIMIT $1 OFFSET $2;
+
+-- name: GetLeaderboardBySubmissions :many
+SELECT
+    u.id,
+    u.display_name,
+    u.avatar_url,
+    COUNT(s.id)::int as total_submissions,
+    COUNT(*) FILTER (WHERE s.status IN ('approved', 'auto_approved'))::int as approved_submissions,
+    COALESCE(SUM(le.amount), 0)::int as total_earnings
+FROM users u
+JOIN submissions s ON s.clipper_id = u.id
+LEFT JOIN ledger_entries le ON le.clipper_id = u.id AND le.entry_type = 'earning'
+WHERE u.role IN ('clipper', 'owner')
+GROUP BY u.id, u.display_name, u.avatar_url
+ORDER BY total_submissions DESC
+LIMIT $1 OFFSET $2;

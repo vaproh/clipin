@@ -987,6 +987,124 @@ func (q *Queries) GetLatestSnapshotForSubmission(ctx context.Context, submission
 	return i, err
 }
 
+const getLeaderboardByEarnings = `-- name: GetLeaderboardByEarnings :many
+
+SELECT
+    u.id,
+    u.display_name,
+    u.avatar_url,
+    COALESCE(SUM(le.amount), 0)::int as total_earnings,
+    COUNT(DISTINCT s.id)::int as total_submissions,
+    COUNT(DISTINCT s.campaign_id)::int as campaigns_participated
+FROM users u
+JOIN ledger_entries le ON le.clipper_id = u.id AND le.entry_type = 'earning'
+JOIN submissions s ON s.clipper_id = u.id AND s.status IN ('approved', 'auto_approved')
+WHERE u.role IN ('clipper', 'owner')
+GROUP BY u.id, u.display_name, u.avatar_url
+ORDER BY total_earnings DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetLeaderboardByEarningsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetLeaderboardByEarningsRow struct {
+	ID                    string      `json:"id"`
+	DisplayName           pgtype.Text `json:"display_name"`
+	AvatarUrl             pgtype.Text `json:"avatar_url"`
+	TotalEarnings         int32       `json:"total_earnings"`
+	TotalSubmissions      int32       `json:"total_submissions"`
+	CampaignsParticipated int32       `json:"campaigns_participated"`
+}
+
+// Leaderboard queries
+func (q *Queries) GetLeaderboardByEarnings(ctx context.Context, arg GetLeaderboardByEarningsParams) ([]GetLeaderboardByEarningsRow, error) {
+	rows, err := q.db.Query(ctx, getLeaderboardByEarnings, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLeaderboardByEarningsRow
+	for rows.Next() {
+		var i GetLeaderboardByEarningsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayName,
+			&i.AvatarUrl,
+			&i.TotalEarnings,
+			&i.TotalSubmissions,
+			&i.CampaignsParticipated,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getLeaderboardBySubmissions = `-- name: GetLeaderboardBySubmissions :many
+SELECT
+    u.id,
+    u.display_name,
+    u.avatar_url,
+    COUNT(s.id)::int as total_submissions,
+    COUNT(*) FILTER (WHERE s.status IN ('approved', 'auto_approved'))::int as approved_submissions,
+    COALESCE(SUM(le.amount), 0)::int as total_earnings
+FROM users u
+JOIN submissions s ON s.clipper_id = u.id
+LEFT JOIN ledger_entries le ON le.clipper_id = u.id AND le.entry_type = 'earning'
+WHERE u.role IN ('clipper', 'owner')
+GROUP BY u.id, u.display_name, u.avatar_url
+ORDER BY total_submissions DESC
+LIMIT $1 OFFSET $2
+`
+
+type GetLeaderboardBySubmissionsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type GetLeaderboardBySubmissionsRow struct {
+	ID                  string      `json:"id"`
+	DisplayName         pgtype.Text `json:"display_name"`
+	AvatarUrl           pgtype.Text `json:"avatar_url"`
+	TotalSubmissions    int32       `json:"total_submissions"`
+	ApprovedSubmissions int32       `json:"approved_submissions"`
+	TotalEarnings       int32       `json:"total_earnings"`
+}
+
+func (q *Queries) GetLeaderboardBySubmissions(ctx context.Context, arg GetLeaderboardBySubmissionsParams) ([]GetLeaderboardBySubmissionsRow, error) {
+	rows, err := q.db.Query(ctx, getLeaderboardBySubmissions, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLeaderboardBySubmissionsRow
+	for rows.Next() {
+		var i GetLeaderboardBySubmissionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.DisplayName,
+			&i.AvatarUrl,
+			&i.TotalSubmissions,
+			&i.ApprovedSubmissions,
+			&i.TotalEarnings,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLedgerEntryByIdempotencyKey = `-- name: GetLedgerEntryByIdempotencyKey :one
 SELECT id, idempotency_key, entry_type, campaign_id, submission_id, clipper_id, amount, description, metadata, created_at FROM ledger_entries WHERE idempotency_key = $1
 `

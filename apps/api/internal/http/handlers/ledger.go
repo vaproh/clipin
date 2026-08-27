@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -16,6 +17,11 @@ type LedgerServiceInterface interface {
 	GetClipperEarningsSummary(ctx context.Context, clipperID string) (*service.EarningsSummary, error)
 	GetCampaignSummary(ctx context.Context, campaignID pgtype.UUID) (*service.CampaignSummary, error)
 	GetCampaignLedger(ctx context.Context, campaignID pgtype.UUID) ([]sqlc.LedgerEntry, error)
+}
+
+// CampaignOwnershipChecker verifies a user owns a campaign.
+type CampaignOwnershipChecker interface {
+	GetByID(ctx context.Context, id pgtype.UUID) (*sqlc.Campaign, error)
 }
 
 // --- Earnings response types ---
@@ -79,7 +85,7 @@ type campaignLedgerOutput struct {
 }
 
 // RegisterLedgerHandlers registers ledger/earnings endpoints on the authenticated API.
-func RegisterLedgerHandlers(api huma.API, svc LedgerServiceInterface) {
+func RegisterLedgerHandlers(api huma.API, svc LedgerServiceInterface, campaignStore CampaignOwnershipChecker) {
 	// GET /me/earnings - clipper earnings summary
 	huma.Register(api, huma.Operation{
 		OperationID: "get-my-earnings",
@@ -131,19 +137,21 @@ func RegisterLedgerHandlers(api huma.API, svc LedgerServiceInterface) {
 		}
 
 		// Verify ownership.
+		campaign, err := campaignStore.GetByID(ctx, campaignID)
+		if err != nil {
+			return nil, huma.Error404NotFound("campaign not found")
+		}
+		if campaign.OwnerID != user.ID {
+			return nil, huma.Error403Forbidden("not campaign owner")
+		}
+
 		summary, err := svc.GetCampaignSummary(ctx, campaignID)
 		if err != nil {
-			if err == service.ErrCampaignNotFound {
+			if errors.Is(err, service.ErrCampaignNotFound) {
 				return nil, huma.Error404NotFound("campaign not found")
 			}
 			return nil, huma.Error500InternalServerError("failed to get campaign ledger")
 		}
-
-		// The summary doesn't include ownership check; we need to verify.
-		// The handler expects the campaign ID to be in the /me/campaigns path,
-		// which means the frontend already filters by owner. We still check
-		// via the campaign data in the summary response.
-		_ = user // ownership verified by path prefix /me/campaigns
 
 		resp := &campaignLedgerOutput{}
 		resp.Body.CampaignID = summary.CampaignID

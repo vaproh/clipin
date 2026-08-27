@@ -148,7 +148,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 
 	if deps.DB != nil {
 		ledgerSvc := service.NewLedgerService(deps.DB.Queries)
-		handlers.RegisterLedgerHandlers(authenticatedAPI, ledgerSvc)
+		handlers.RegisterLedgerHandlers(authenticatedAPI, ledgerSvc, campaignSvc)
 	}
 
 	if deps.DB != nil {

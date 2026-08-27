@@ -21,16 +21,16 @@ func NewCampaignCache(redis *r.Client) *CampaignCache {
 	return &CampaignCache{redis: redis}
 }
 
-func cacheKey(platform string, maxCpm int, minBudget int, page int) string {
-	return fmt.Sprintf("campaigns:list:%s:%d:%d:%d", platform, maxCpm, minBudget, page)
+func cacheKey(platform string, maxCpm int, minBudget int, search string, page int) string {
+	return fmt.Sprintf("campaigns:list:%s:%d:%d:%s:%d", platform, maxCpm, minBudget, search, page)
 }
 
 // GetList returns cached campaigns for a filter+page combination, or nil on miss.
-func (cc *CampaignCache) GetList(ctx context.Context, platform string, maxCpm, minBudget, page int) ([]sqlc.Campaign, error) {
+func (cc *CampaignCache) GetList(ctx context.Context, platform string, maxCpm, minBudget int, search string, page int) ([]sqlc.Campaign, error) {
 	if cc.redis == nil {
 		return nil, nil
 	}
-	data, err := cc.redis.Get(ctx, cacheKey(platform, maxCpm, minBudget, page))
+	data, err := cc.redis.Get(ctx, cacheKey(platform, maxCpm, minBudget, search, page))
 	if err != nil || len(data) == 0 {
 		return nil, nil // cache miss, not an error
 	}
@@ -42,7 +42,7 @@ func (cc *CampaignCache) GetList(ctx context.Context, platform string, maxCpm, m
 }
 
 // SetList stores campaigns for a filter+page combination.
-func (cc *CampaignCache) SetList(ctx context.Context, platform string, maxCpm, minBudget, page int, campaigns []sqlc.Campaign) error {
+func (cc *CampaignCache) SetList(ctx context.Context, platform string, maxCpm, minBudget int, search string, page int, campaigns []sqlc.Campaign) error {
 	if cc.redis == nil {
 		return nil
 	}
@@ -50,5 +50,5 @@ func (cc *CampaignCache) SetList(ctx context.Context, platform string, maxCpm, m
 	if err != nil {
 		return err
 	}
-	return cc.redis.Set(ctx, cacheKey(platform, maxCpm, minBudget, page), data, campaignCacheTTL)
+	return cc.redis.Set(ctx, cacheKey(platform, maxCpm, minBudget, search, page), data, campaignCacheTTL)
 }

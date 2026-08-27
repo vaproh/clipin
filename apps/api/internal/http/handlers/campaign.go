@@ -31,6 +31,7 @@ type listCampaignsInput struct {
 	Platform  string `query:"platform" doc:"Filter by platform (youtube, instagram, tiktok, multi)"`
 	MaxCPM    int    `query:"max_cpm" doc:"Max CPM rate in paise per 1000 views"`
 	MinBudget int    `query:"min_budget" doc:"Minimum remaining budget in paise"`
+	Q         string `query:"q" doc:"Search campaigns by title or description (case-insensitive)"`
 	Page      int    `query:"page" doc:"Page number (1-indexed)"`
 	PageSize  int    `query:"page_size" doc:"Results per page (max 100)"`
 }
@@ -143,6 +144,7 @@ func RegisterCampaignHandlers(api huma.API, svc CampaignServiceInterface) {
 			Platform:  input.Platform,
 			MaxCPM:    int32(input.MaxCPM),
 			MinBudget: int32(input.MinBudget),
+			Search:    input.Q,
 			Page:      page,
 			PageSize:  pageSize,
 		})

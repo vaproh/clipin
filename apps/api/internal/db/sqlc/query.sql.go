@@ -46,16 +46,23 @@ WHERE status IN ('active', 'funded')
   AND ($1::text = '' OR platform = $1)
   AND ($2::int = 0 OR cpm_rate <= $2)
   AND ($3::int = 0 OR remaining_budget >= $3)
+  AND ($4::text = '' OR title ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%')
 `
 
 type CountCampaignsFilteredParams struct {
 	Column1 string `json:"column_1"`
 	Column2 int32  `json:"column_2"`
 	Column3 int32  `json:"column_3"`
+	Column4 string `json:"column_4"`
 }
 
 func (q *Queries) CountCampaignsFiltered(ctx context.Context, arg CountCampaignsFilteredParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countCampaignsFiltered, arg.Column1, arg.Column2, arg.Column3)
+	row := q.db.QueryRow(ctx, countCampaignsFiltered,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1334,14 +1341,16 @@ WHERE status IN ('active', 'funded')
   AND ($1::text = '' OR platform = $1)
   AND ($2::int = 0 OR cpm_rate <= $2)
   AND ($3::int = 0 OR remaining_budget >= $3)
+  AND ($4::text = '' OR title ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%')
 ORDER BY created_at DESC
-LIMIT $4 OFFSET $5
+LIMIT $5 OFFSET $6
 `
 
 type ListCampaignsFilteredParams struct {
 	Column1 string `json:"column_1"`
 	Column2 int32  `json:"column_2"`
 	Column3 int32  `json:"column_3"`
+	Column4 string `json:"column_4"`
 	Limit   int32  `json:"limit"`
 	Offset  int32  `json:"offset"`
 }
@@ -1351,6 +1360,7 @@ func (q *Queries) ListCampaignsFiltered(ctx context.Context, arg ListCampaignsFi
 		arg.Column1,
 		arg.Column2,
 		arg.Column3,
+		arg.Column4,
 		arg.Limit,
 		arg.Offset,
 	)

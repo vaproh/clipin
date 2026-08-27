@@ -326,3 +326,219 @@ func TestUpdate_NotOwner(t *testing.T) {
 		t.Errorf("expected ErrNotOwner, got %v", err)
 	}
 }
+
+func TestListPublic_SearchByTitle(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "promo" {
+				t.Errorf("expected search term 'promo', got %q", arg.Column4)
+			}
+			return []sqlc.Campaign{testCampaign("1", "owner1", "Summer Promo Campaign", "active")}, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			if arg.Column4 != "promo" {
+				t.Errorf("expected search term 'promo' in count, got %q", arg.Column4)
+			}
+			return 1, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{Search: "promo"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("expected total 1, got %d", result.Total)
+	}
+	if len(result.Campaigns) != 1 {
+		t.Fatalf("expected 1 campaign, got %d", len(result.Campaigns))
+	}
+	if result.Campaigns[0].Title != "Summer Promo Campaign" {
+		t.Errorf("expected title 'Summer Promo Campaign', got %q", result.Campaigns[0].Title)
+	}
+}
+
+func TestListPublic_SearchByDescription(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "skincare" {
+				t.Errorf("expected search term 'skincare', got %q", arg.Column4)
+			}
+			return []sqlc.Campaign{testCampaign("1", "owner1", "Beauty Campaign", "active")}, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 1, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{Search: "skincare"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(result.Campaigns) != 1 {
+		t.Fatalf("expected 1 campaign, got %d", len(result.Campaigns))
+	}
+}
+
+func TestListPublic_SearchEmptyReturnsAll(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "" {
+				t.Errorf("expected empty search, got %q", arg.Column4)
+			}
+			return []sqlc.Campaign{
+				testCampaign("1", "owner1", "Campaign A", "active"),
+				testCampaign("2", "owner1", "Campaign B", "active"),
+			}, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 2, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 2 {
+		t.Errorf("expected total 2, got %d", result.Total)
+	}
+}
+
+func TestListPublic_SearchWithFilters(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "gaming" {
+				t.Errorf("expected search 'gaming', got %q", arg.Column4)
+			}
+			if arg.Column1 != "youtube" {
+				t.Errorf("expected platform 'youtube', got %q", arg.Column1)
+			}
+			if arg.Column2 != 200 {
+				t.Errorf("expected maxCPM 200, got %d", arg.Column2)
+			}
+			if arg.Column3 != 5000 {
+				t.Errorf("expected minBudget 5000, got %d", arg.Column3)
+			}
+			return []sqlc.Campaign{testCampaign("1", "owner1", "Gaming Promo", "active")}, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 1, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{
+		Search:    "gaming",
+		Platform:  "youtube",
+		MaxCPM:    200,
+		MinBudget: 5000,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("expected total 1, got %d", result.Total)
+	}
+}
+
+func TestListPublic_SearchNoResults(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			return nil, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 0, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{Search: "nonexistent"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 0 {
+		t.Errorf("expected total 0, got %d", result.Total)
+	}
+	if len(result.Campaigns) != 0 {
+		t.Errorf("expected 0 campaigns, got %d", len(result.Campaigns))
+	}
+}
+
+func TestListPublic_SearchCaseInsensitive(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "PROMO" {
+				t.Errorf("expected search term 'PROMO', got %q", arg.Column4)
+			}
+			return []sqlc.Campaign{testCampaign("1", "owner1", "Summer Promo", "active")}, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 1, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{Search: "PROMO"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 1 {
+		t.Errorf("expected total 1, got %d", result.Total)
+	}
+}
+
+func TestListPublic_SearchPagination(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "promo" {
+				t.Errorf("expected search 'promo', got %q", arg.Column4)
+			}
+			if arg.Limit != 5 {
+				t.Errorf("expected limit 5, got %d", arg.Limit)
+			}
+			if arg.Offset != 10 {
+				t.Errorf("expected offset 10 (page 3, size 5), got %d", arg.Offset)
+			}
+			return nil, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 0, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{
+		Search:   "promo",
+		Page:     3,
+		PageSize: 5,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Page != 3 {
+		t.Errorf("expected page 3, got %d", result.Page)
+	}
+}
+
+func TestListPublic_SearchPartialMatch(t *testing.T) {
+	store := &mockCampaignStore{
+		listFiltered: func(ctx context.Context, arg sqlc.ListCampaignsFilteredParams) ([]sqlc.Campaign, error) {
+			if arg.Column4 != "promo" {
+				t.Errorf("expected search 'promo', got %q", arg.Column4)
+			}
+			return []sqlc.Campaign{
+				testCampaign("1", "owner1", "Promo Campaign", "active"),
+				testCampaign("2", "owner1", "Summer Promo", "active"),
+				testCampaign("3", "owner1", "Promotional Video", "active"),
+			}, nil
+		},
+		countFiltered: func(ctx context.Context, arg sqlc.CountCampaignsFilteredParams) (int64, error) {
+			return 3, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	result, err := svc.ListPublic(context.Background(), service.CampaignFilters{Search: "promo"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Total != 3 {
+		t.Errorf("expected total 3, got %d", result.Total)
+	}
+}

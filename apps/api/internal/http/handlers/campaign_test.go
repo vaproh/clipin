@@ -548,3 +548,126 @@ func TestOwnerStats_ClipperForbidden(t *testing.T) {
 		t.Fatalf("expected 403, got %d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+// --- Search tests ---
+
+func TestListCampaigns_SearchByQ(t *testing.T) {
+	svc := &mockCampaignService{
+		listPublic: func(ctx context.Context, f service.CampaignFilters) (*service.CampaignListResult, error) {
+			if f.Search != "promo" {
+				t.Errorf("expected search 'promo', got %q", f.Search)
+			}
+			c := testCampaignModel()
+			c.Title = "Summer Promo"
+			return &service.CampaignListResult{
+				Campaigns: []sqlc.Campaign{c},
+				Total:     1,
+				Page:      1,
+				PageSize:  20,
+			}, nil
+		},
+	}
+	router := campaignRouter(svc)
+	rec := doRequest(t, router, http.MethodGet, "/campaigns?q=promo", "")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var out struct {
+		Campaigns []struct {
+			Title string `json:"title"`
+		} `json:"campaigns"`
+		Total int64 `json:"total"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.Total != 1 {
+		t.Errorf("expected total 1, got %d", out.Total)
+	}
+	if out.Campaigns[0].Title != "Summer Promo" {
+		t.Errorf("expected title 'Summer Promo', got %q", out.Campaigns[0].Title)
+	}
+}
+
+func TestListCampaigns_SearchEmpty(t *testing.T) {
+	svc := &mockCampaignService{
+		listPublic: func(ctx context.Context, f service.CampaignFilters) (*service.CampaignListResult, error) {
+			if f.Search != "" {
+				t.Errorf("expected empty search, got %q", f.Search)
+			}
+			return &service.CampaignListResult{
+				Campaigns: []sqlc.Campaign{},
+				Total:     0,
+				Page:      1,
+				PageSize:  20,
+			}, nil
+		},
+	}
+	router := campaignRouter(svc)
+	rec := doRequest(t, router, http.MethodGet, "/campaigns", "")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestListCampaigns_SearchWithFilters(t *testing.T) {
+	svc := &mockCampaignService{
+		listPublic: func(ctx context.Context, f service.CampaignFilters) (*service.CampaignListResult, error) {
+			if f.Search != "gaming" {
+				t.Errorf("expected search 'gaming', got %q", f.Search)
+			}
+			if f.Platform != "youtube" {
+				t.Errorf("expected platform 'youtube', got %q", f.Platform)
+			}
+			if f.MaxCPM != 200 {
+				t.Errorf("expected maxCPM 200, got %d", f.MaxCPM)
+			}
+			return &service.CampaignListResult{
+				Campaigns: []sqlc.Campaign{},
+				Total:     0,
+				Page:      1,
+				PageSize:  20,
+			}, nil
+		},
+	}
+	router := campaignRouter(svc)
+	rec := doRequest(t, router, http.MethodGet, "/campaigns?q=gaming&platform=youtube&max_cpm=200", "")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+}
+
+func TestListCampaigns_SearchNoResults(t *testing.T) {
+	svc := &mockCampaignService{
+		listPublic: func(ctx context.Context, f service.CampaignFilters) (*service.CampaignListResult, error) {
+			return &service.CampaignListResult{
+				Campaigns: []sqlc.Campaign{},
+				Total:     0,
+				Page:      1,
+				PageSize:  20,
+			}, nil
+		},
+	}
+	router := campaignRouter(svc)
+	rec := doRequest(t, router, http.MethodGet, "/campaigns?q=nonexistent", "")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	var out struct {
+		Campaigns []interface{} `json:"campaigns"`
+		Total     int64         `json:"total"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if out.Total != 0 {
+		t.Errorf("expected total 0, got %d", out.Total)
+	}
+	if len(out.Campaigns) != 0 {
+		t.Errorf("expected 0 campaigns, got %d", len(out.Campaigns))
+	}
+}

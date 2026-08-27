@@ -52,8 +52,9 @@ WHERE status IN ('active', 'funded')
   AND ($1::text = '' OR platform = $1)
   AND ($2::int = 0 OR cpm_rate <= $2)
   AND ($3::int = 0 OR remaining_budget >= $3)
+  AND ($4::text = '' OR title ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%')
 ORDER BY created_at DESC
-LIMIT $4 OFFSET $5;
+LIMIT $5 OFFSET $6;
 
 -- name: CountCampaignsFiltered :one
 SELECT COUNT(*) FROM campaigns
@@ -61,7 +62,8 @@ WHERE status IN ('active', 'funded')
   AND (ends_at IS NULL OR ends_at > NOW())
   AND ($1::text = '' OR platform = $1)
   AND ($2::int = 0 OR cpm_rate <= $2)
-  AND ($3::int = 0 OR remaining_budget >= $3);
+  AND ($3::int = 0 OR remaining_budget >= $3)
+  AND ($4::text = '' OR title ILIKE '%' || $4 || '%' OR description ILIKE '%' || $4 || '%');
 
 -- name: ListCampaignsByOwner :many
 SELECT * FROM campaigns

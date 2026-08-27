@@ -43,6 +43,7 @@ export interface CampaignListResponse {
 }
 
 export interface CampaignFilters {
+  q?: string
   platform?: string
   max_cpm?: number
   min_budget?: number
@@ -117,6 +118,7 @@ export function useCampaigns(filters: Ref<CampaignFilters>) {
     queryKey: ['campaigns', filters],
     queryFn: () => {
       const params = new URLSearchParams()
+      if (filters.value.q) params.set('q', filters.value.q)
       if (filters.value.platform) params.set('platform', filters.value.platform)
       if (filters.value.max_cpm) params.set('max_cpm', String(filters.value.max_cpm))
       if (filters.value.min_budget) params.set('min_budget', String(filters.value.min_budget))

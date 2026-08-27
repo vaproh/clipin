@@ -30,6 +30,11 @@ function setPage(page: number) {
 
     <CampaignCampaignFilters v-model="filters" />
 
+    <!-- Search result count -->
+    <p v-if="data && !isLoading" class="text-xs font-mono text-neutral-500">
+      {{ filters.q ? `${data.total} campaign${data.total === 1 ? '' : 's'} found` : '' }}
+    </p>
+
     <!-- Loading -->
     <SharedLoadingSpinner v-if="isLoading" />
 

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -21,6 +22,8 @@ type SubmissionStore interface {
 	GetSubmissionByID(ctx context.Context, id pgtype.UUID) (sqlc.Submission, error)
 	CreateSubmission(ctx context.Context, arg sqlc.CreateSubmissionParams) (sqlc.Submission, error)
 	UpdateSubmissionStatus(ctx context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error)
+	ApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error)
+	AutoApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error)
 	ListSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) ([]sqlc.Submission, error)
 	ListSubmissionsByClipper(ctx context.Context, clipperID string) ([]sqlc.Submission, error)
 	CountSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error)
@@ -54,12 +57,13 @@ var (
 	ErrPlatformMismatch      = fmt.Errorf("submission platform does not match campaign platform")
 	ErrInvalidURL            = fmt.Errorf("invalid post URL")
 	ErrSubmissionNotPending  = fmt.Errorf("submission is not in pending status")
+	ErrSelfApproval          = fmt.Errorf("cannot approve your own submission")
 )
 
 // Submit creates a new submission with validation.
 func (s *SubmissionService) Submit(ctx context.Context, campaignID pgtype.UUID, clipperID, postURL, platform string) (*sqlc.Submission, error) {
 	// Validate URL format.
-	if err := validatePostURL(postURL); err != nil {
+	if err := ValidatePostURL(postURL); err != nil {
 		return nil, err
 	}
 
@@ -72,7 +76,7 @@ func (s *SubmissionService) Submit(ctx context.Context, campaignID pgtype.UUID, 
 	// Fetch campaign.
 	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCampaignNotFound
 		}
 		return nil, fmt.Errorf("get campaign: %w", err)
@@ -149,7 +153,7 @@ func (s *SubmissionService) ListByCampaign(ctx context.Context, campaignID pgtyp
 func (s *SubmissionService) VerifyCampaignOwnership(ctx context.Context, campaignID pgtype.UUID, ownerID string) error {
 	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrCampaignNotFound
 		}
 		return fmt.Errorf("get campaign: %w", err)
@@ -169,7 +173,7 @@ func (s *SubmissionService) ListByClipper(ctx context.Context, clipperID string)
 func (s *SubmissionService) GetByID(ctx context.Context, id pgtype.UUID) (*sqlc.Submission, error) {
 	submission, err := s.store.GetSubmissionByID(ctx, id)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("get submission: %w", err)
@@ -181,14 +185,15 @@ func (s *SubmissionService) GetByID(ctx context.Context, id pgtype.UUID) (*sqlc.
 func (s *SubmissionService) Approve(ctx context.Context, submissionID pgtype.UUID, ownerID string) (*sqlc.Submission, error) {
 	submission, err := s.store.GetSubmissionByID(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrSubmissionNotFound
 		}
 		return nil, fmt.Errorf("get submission: %w", err)
 	}
 
-	if submission.Status != "pending" {
-		return nil, ErrSubmissionNotPending
+	// Prevent self-approval: clipper cannot approve their own submission.
+	if submission.ClipperID == ownerID {
+		return nil, ErrSelfApproval
 	}
 
 	// Verify ownership.
@@ -200,12 +205,18 @@ func (s *SubmissionService) Approve(ctx context.Context, submissionID pgtype.UUI
 		return nil, ErrNotOwner
 	}
 
-	updated, err := s.store.UpdateSubmissionStatus(ctx, sqlc.UpdateSubmissionStatusParams{
-		ID:     submissionID,
-		Status: "approved",
-	})
+	rowsAffected, err := s.store.ApproveSubmission(ctx, submissionID)
 	if err != nil {
 		return nil, fmt.Errorf("approve submission: %w", err)
+	}
+	if rowsAffected == 0 {
+		return nil, ErrSubmissionNotPending
+	}
+
+	// Re-read to return the updated row.
+	updated, err := s.store.GetSubmissionByID(ctx, submissionID)
+	if err != nil {
+		return nil, fmt.Errorf("read approved submission: %w", err)
 	}
 	return &updated, nil
 }
@@ -214,7 +225,7 @@ func (s *SubmissionService) Approve(ctx context.Context, submissionID pgtype.UUI
 func (s *SubmissionService) Reject(ctx context.Context, submissionID pgtype.UUID, ownerID string, reason string) (*sqlc.Submission, error) {
 	submission, err := s.store.GetSubmissionByID(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrSubmissionNotFound
 		}
 		return nil, fmt.Errorf("get submission: %w", err)
@@ -268,28 +279,31 @@ func (s *SubmissionService) AutoApprove(ctx context.Context) (int, error) {
 
 		cutoff := row.CreatedAt.Time.Add(time.Duration(hours) * time.Hour)
 		if time.Now().After(cutoff) {
-			_, err := s.store.UpdateSubmissionStatus(ctx, sqlc.UpdateSubmissionStatusParams{
-				ID:     row.ID,
-				Status: "auto_approved",
-			})
+			rowsAffected, err := s.store.AutoApproveSubmission(ctx, row.ID)
 			if err != nil {
 				return count, fmt.Errorf("auto-approve submission %s: %w", row.ID, err)
 			}
-			count++
+			// rowsAffected == 0 means another path already handled it; skip silently.
+			if rowsAffected > 0 {
+				count++
+			}
 		}
 	}
 
 	return count, nil
 }
 
-// validatePostURL checks that the URL is well-formed.
-func validatePostURL(raw string) error {
+// ValidatePostURL checks that the URL is well-formed and uses http or https.
+func ValidatePostURL(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return ErrInvalidURL
 	}
 	u, err := url.ParseRequestURI(raw)
 	if err != nil || u.Scheme == "" || u.Host == "" {
+		return ErrInvalidURL
+	}
+	if u.Scheme != "https" && u.Scheme != "http" {
 		return ErrInvalidURL
 	}
 	return nil

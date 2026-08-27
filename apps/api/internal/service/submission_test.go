@@ -17,6 +17,8 @@ type mockSubmissionStore struct {
 	getCampaignByID func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error)
 	create          func(ctx context.Context, arg sqlc.CreateSubmissionParams) (sqlc.Submission, error)
 	updateStatus    func(ctx context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error)
+	approveSubmission func(ctx context.Context, id pgtype.UUID) (int64, error)
+	autoApproveSubmission func(ctx context.Context, id pgtype.UUID) (int64, error)
 	listByCampaign  func(ctx context.Context, campaignID pgtype.UUID) ([]sqlc.Submission, error)
 	listByClipper   func(ctx context.Context, clipperID string) ([]sqlc.Submission, error)
 	countByCampaign func(ctx context.Context, campaignID pgtype.UUID) (int64, error)
@@ -38,6 +40,20 @@ func (m *mockSubmissionStore) CreateSubmission(ctx context.Context, arg sqlc.Cre
 
 func (m *mockSubmissionStore) UpdateSubmissionStatus(ctx context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error) {
 	return m.updateStatus(ctx, arg)
+}
+
+func (m *mockSubmissionStore) ApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error) {
+	if m.approveSubmission != nil {
+		return m.approveSubmission(ctx, id)
+	}
+	return 1, nil
+}
+
+func (m *mockSubmissionStore) AutoApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error) {
+	if m.autoApproveSubmission != nil {
+		return m.autoApproveSubmission(ctx, id)
+	}
+	return 1, nil
 }
 
 func (m *mockSubmissionStore) ListSubmissionsByCampaign(ctx context.Context, campaignID pgtype.UUID) ([]sqlc.Submission, error) {
@@ -265,11 +281,8 @@ func TestApprove_HappyPath(t *testing.T) {
 		getCampaignByID: func(_ context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
 			return campaign, nil
 		},
-		updateStatus: func(_ context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error) {
-			if arg.Status != "approved" {
-				t.Errorf("expected status approved, got %s", arg.Status)
-			}
-			return sqlc.Submission{ID: arg.ID, Status: "approved"}, nil
+		approveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 1, nil
 		},
 	}
 	svc := service.NewSubmissionService(store)
@@ -277,8 +290,58 @@ func TestApprove_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.Status != "approved" {
-		t.Errorf("expected status approved, got %s", result.Status)
+	if result.Status != "pending" {
+		t.Errorf("expected status pending (re-read), got %s", result.Status)
+	}
+}
+
+func TestApprove_SelfApprovalBlocked(t *testing.T) {
+	submission := sqlc.Submission{
+		ID:         testCampaignID,
+		CampaignID: testCampaignID,
+		ClipperID:  "owner1", // clipper IS the owner
+		PostUrl:    "https://youtube.com/watch?v=abc",
+		Status:     "pending",
+	}
+	campaign := testActiveCampaign()
+	store := &mockSubmissionStore{
+		getByID: func(_ context.Context, id pgtype.UUID) (sqlc.Submission, error) {
+			return submission, nil
+		},
+		getCampaignByID: func(_ context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return campaign, nil
+		},
+	}
+	svc := service.NewSubmissionService(store)
+	_, err := svc.Approve(context.Background(), testCampaignID, "owner1")
+	if err != service.ErrSelfApproval {
+		t.Errorf("expected ErrSelfApproval, got %v", err)
+	}
+}
+
+func TestApprove_AlreadyHandled(t *testing.T) {
+	submission := sqlc.Submission{
+		ID:         testCampaignID,
+		CampaignID: testCampaignID,
+		ClipperID:  "clipper1",
+		Status:     "pending",
+	}
+	campaign := testActiveCampaign()
+	store := &mockSubmissionStore{
+		getByID: func(_ context.Context, id pgtype.UUID) (sqlc.Submission, error) {
+			return submission, nil
+		},
+		getCampaignByID: func(_ context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return campaign, nil
+		},
+		approveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 0, nil // already handled by concurrent path
+		},
+	}
+	svc := service.NewSubmissionService(store)
+	_, err := svc.Approve(context.Background(), testCampaignID, "owner1")
+	if err != service.ErrSubmissionNotPending {
+		t.Errorf("expected ErrSubmissionNotPending, got %v", err)
 	}
 }
 
@@ -290,6 +353,12 @@ func TestApprove_NotPending(t *testing.T) {
 	store := &mockSubmissionStore{
 		getByID: func(_ context.Context, id pgtype.UUID) (sqlc.Submission, error) {
 			return submission, nil
+		},
+		getCampaignByID: func(_ context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return testActiveCampaign(), nil
+		},
+		approveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 0, nil // already approved, rows not updated
 		},
 	}
 	svc := service.NewSubmissionService(store)
@@ -304,6 +373,7 @@ func TestApprove_NotOwner(t *testing.T) {
 		ID:         testCampaignID,
 		CampaignID: testCampaignID,
 		Status:     "pending",
+		ClipperID:  "clipper1",
 	}
 	campaign := testActiveCampaign()
 	store := &mockSubmissionStore{
@@ -424,11 +494,8 @@ func TestAutoApprove_ApprovesExpiredSubmissions(t *testing.T) {
 		listPending: func(_ context.Context, _ pgtype.Timestamptz) ([]sqlc.ListPendingSubmissionsOlderThanRow, error) {
 			return rows, nil
 		},
-		updateStatus: func(_ context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error) {
-			if arg.Status != "auto_approved" {
-				t.Errorf("expected auto_approved, got %s", arg.Status)
-			}
-			return sqlc.Submission{ID: arg.ID, Status: "auto_approved"}, nil
+		autoApproveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 1, nil
 		},
 	}
 	svc := service.NewSubmissionService(store)
@@ -461,9 +528,9 @@ func TestAutoApprove_SkipsNotYetExpired(t *testing.T) {
 		listPending: func(_ context.Context, _ pgtype.Timestamptz) ([]sqlc.ListPendingSubmissionsOlderThanRow, error) {
 			return rows, nil
 		},
-		updateStatus: func(_ context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error) {
-			t.Error("should not have called updateStatus")
-			return sqlc.Submission{}, nil
+		autoApproveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			t.Error("should not have called autoApproveSubmission")
+			return 0, nil
 		},
 	}
 	svc := service.NewSubmissionService(store)
@@ -473,6 +540,40 @@ func TestAutoApprove_SkipsNotYetExpired(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("expected 0 auto-approved, got %d", count)
+	}
+}
+
+func TestAutoApprove_SkipsAlreadyHandled(t *testing.T) {
+	now := time.Now()
+	cutoff := now.Add(-49 * time.Hour)
+
+	rows := []sqlc.ListPendingSubmissionsOlderThanRow{
+		{
+			ID:               pgtype.UUID{Bytes: [16]byte{10}, Valid: true},
+			CampaignID:       testCampaignID,
+			ClipperID:        "clipper1",
+			PostUrl:          "https://youtube.com/watch?v=1",
+			Status:           "pending",
+			CreatedAt:        pgtype.Timestamptz{Valid: true, Time: cutoff},
+			AutoApproveHours: pgtype.Int4{Valid: true, Int32: 48},
+		},
+	}
+
+	store := &mockSubmissionStore{
+		listPending: func(_ context.Context, _ pgtype.Timestamptz) ([]sqlc.ListPendingSubmissionsOlderThanRow, error) {
+			return rows, nil
+		},
+		autoApproveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 0, nil // already handled
+		},
+	}
+	svc := service.NewSubmissionService(store)
+	count, err := svc.AutoApprove(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 auto-approved (already handled), got %d", count)
 	}
 }
 
@@ -496,8 +597,8 @@ func TestAutoApprove_DefaultHoursWhenInvalid(t *testing.T) {
 		listPending: func(_ context.Context, _ pgtype.Timestamptz) ([]sqlc.ListPendingSubmissionsOlderThanRow, error) {
 			return rows, nil
 		},
-		updateStatus: func(_ context.Context, arg sqlc.UpdateSubmissionStatusParams) (sqlc.Submission, error) {
-			return sqlc.Submission{ID: arg.ID, Status: "auto_approved"}, nil
+		autoApproveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 1, nil
 		},
 	}
 	svc := service.NewSubmissionService(store)
@@ -548,5 +649,33 @@ func TestListByClipper(t *testing.T) {
 	}
 	if len(result) != 1 {
 		t.Fatalf("expected 1 submission, got %d", len(result))
+	}
+}
+
+func TestValidatePostURL_RejectsFileScheme(t *testing.T) {
+	err := service.ValidatePostURL("file:///etc/passwd")
+	if err != service.ErrInvalidURL {
+		t.Errorf("expected ErrInvalidURL for file:// URL, got %v", err)
+	}
+}
+
+func TestValidatePostURL_RejectsJavaScriptScheme(t *testing.T) {
+	err := service.ValidatePostURL("javascript:alert(1)")
+	if err != service.ErrInvalidURL {
+		t.Errorf("expected ErrInvalidURL for javascript: URL, got %v", err)
+	}
+}
+
+func TestValidatePostURL_AcceptsHTTPS(t *testing.T) {
+	err := service.ValidatePostURL("https://youtube.com/watch?v=abc")
+	if err != nil {
+		t.Errorf("expected nil error for HTTPS URL, got %v", err)
+	}
+}
+
+func TestValidatePostURL_AcceptsHTTP(t *testing.T) {
+	err := service.ValidatePostURL("http://youtube.com/watch?v=abc")
+	if err != nil {
+		t.Errorf("expected nil error for HTTP URL, got %v", err)
 	}
 }

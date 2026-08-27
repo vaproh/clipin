@@ -129,6 +129,31 @@ func TestUpdateUPI_StoreError(t *testing.T) {
 	}
 }
 
+func TestUpdateUPI_InvalidFormat_NoAt(t *testing.T) {
+	svc := service.NewPayoutService(&mockPayoutStore{}, &payout.RazorpayStub{})
+	_, err := svc.UpdateUPI(context.Background(), "clipper1", "invalidupi")
+	if err == nil {
+		t.Error("expected error for UPI ID without @")
+	}
+}
+
+func TestUpdateUPI_InvalidFormat_TooShort(t *testing.T) {
+	svc := service.NewPayoutService(&mockPayoutStore{}, &payout.RazorpayStub{})
+	_, err := svc.UpdateUPI(context.Background(), "clipper1", "a@")
+	if err == nil {
+		t.Error("expected error for too-short UPI ID")
+	}
+}
+
+func TestUpdateUPI_InvalidFormat_TooLong(t *testing.T) {
+	svc := service.NewPayoutService(&mockPayoutStore{}, &payout.RazorpayStub{})
+	longUpi := string(make([]byte, 40))
+	_, err := svc.UpdateUPI(context.Background(), "clipper1", longUpi)
+	if err == nil {
+		t.Error("expected error for too-long UPI ID")
+	}
+}
+
 // --- RequestPayout tests ---
 
 func TestRequestPayout_HappyPath(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -189,11 +190,17 @@ func (s *CampaignService) Create(ctx context.Context, ownerID string, in *Create
 
 	var startsAt, endsAt pgtype.Timestamptz
 	if in.StartsAt != nil {
-		t, _ := time.Parse(time.RFC3339, *in.StartsAt)
+		t, err := time.Parse(time.RFC3339, *in.StartsAt)
+		if err != nil {
+			return nil, &ValidationError{Errors: []string{fmt.Sprintf("starts_at: %s", err.Error())}}
+		}
 		startsAt = pgtype.Timestamptz{Valid: true, Time: t}
 	}
 	if in.EndsAt != nil {
-		t, _ := time.Parse(time.RFC3339, *in.EndsAt)
+		t, err := time.Parse(time.RFC3339, *in.EndsAt)
+		if err != nil {
+			return nil, &ValidationError{Errors: []string{fmt.Sprintf("ends_at: %s", err.Error())}}
+		}
 		endsAt = pgtype.Timestamptz{Valid: true, Time: t}
 	}
 
@@ -229,7 +236,7 @@ func (s *CampaignService) Create(ctx context.Context, ownerID string, in *Create
 		if _, err := s.ledger.RecordPlatformFee(ctx, id, fee, feeKey); err != nil {
 			// Log but don't fail the campaign creation. The fee is already
 			// tracked in the campaigns.platform_fee column.
-			fmt.Printf("WARNING: failed to record platform fee in ledger: %v\n", err)
+			slog.Warn("failed to record platform fee in ledger", "error", err, "campaign_id", fmt.Sprintf("%x", id.Bytes))
 		}
 	}
 
@@ -279,7 +286,10 @@ func (s *CampaignService) Update(ctx context.Context, ownerID string, campaignID
 		campaign.AutoApproveHours = pgtype.Int4{Valid: true, Int32: *in.AutoApproveHours}
 	}
 	if in.EndsAt != nil {
-		t, _ := time.Parse(time.RFC3339, *in.EndsAt)
+		t, err := time.Parse(time.RFC3339, *in.EndsAt)
+		if err != nil {
+			return nil, &ValidationError{Errors: []string{fmt.Sprintf("ends_at: %s", err.Error())}}
+		}
 		campaign.EndsAt = pgtype.Timestamptz{Valid: true, Time: t}
 	}
 
@@ -330,7 +340,7 @@ func (s *CampaignService) Cancel(ctx context.Context, ownerID string, campaignID
 	if s.ledger != nil && campaign.RemainingBudget > 0 {
 		refundKey := fmt.Sprintf("refund:%s", fmt.Sprintf("%x", campaignID.Bytes))
 		if _, err := s.ledger.RecordRefund(ctx, campaignID, campaign.RemainingBudget, refundKey); err != nil {
-			fmt.Printf("WARNING: failed to record refund in ledger: %v\n", err)
+			slog.Warn("failed to record refund in ledger", "error", err, "campaign_id", fmt.Sprintf("%x", campaignID.Bytes))
 		}
 	}
 

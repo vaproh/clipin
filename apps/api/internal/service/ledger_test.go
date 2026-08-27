@@ -582,3 +582,13 @@ func TestRecordEarning_NegativeCPMRate(t *testing.T) {
 		t.Error("expected error for negative cpm_rate")
 	}
 }
+
+func TestRecordEarning_OverflowGuard(t *testing.T) {
+	store := &mockLedgerStore{}
+	svc := service.NewLedgerService(store)
+	// views * cpm / 1000 that would overflow int32
+	_, err := svc.RecordEarning(context.Background(), testLedgerSubmissionID, testLedgerCampaignID, "clipper1", 3000000000, 1000, "earning:overflow")
+	if err == nil {
+		t.Error("expected error for overflowing amount")
+	}
+}

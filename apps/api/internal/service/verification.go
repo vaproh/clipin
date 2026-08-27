@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -72,7 +73,7 @@ type EligibleViewsResult struct {
 func (s *VerificationService) ComputeEligibleViews(ctx context.Context, submissionID pgtype.UUID) (*EligibleViewsResult, error) {
 	row, err := s.store.GetSubmissionWithCampaign(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrSubmissionNotFound
 		}
 		return nil, fmt.Errorf("get submission with campaign: %w", err)
@@ -86,7 +87,7 @@ func (s *VerificationService) ComputeEligibleViews(ctx context.Context, submissi
 	// Get initial snapshot.
 	initial, err := s.store.GetInitialSnapshotForSubmission(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return result, nil
 		}
 		return nil, fmt.Errorf("get initial snapshot: %w", err)
@@ -95,7 +96,7 @@ func (s *VerificationService) ComputeEligibleViews(ctx context.Context, submissi
 	// Get latest snapshot.
 	latest, err := s.store.GetLatestSnapshotForSubmission(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return result, nil
 		}
 		return nil, fmt.Errorf("get latest snapshot: %w", err)
@@ -136,7 +137,7 @@ type VerificationStatus struct {
 func (s *VerificationService) GetVerificationStatus(ctx context.Context, submissionID pgtype.UUID) (*VerificationStatus, error) {
 	row, err := s.store.GetSubmissionWithCampaign(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrSubmissionNotFound
 		}
 		return nil, fmt.Errorf("get submission with campaign: %w", err)
@@ -161,7 +162,7 @@ func (s *VerificationService) GetVerificationStatus(ctx context.Context, submiss
 	// Get initial and latest for delta computation.
 	initial, err := s.store.GetInitialSnapshotForSubmission(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return status, nil
 		}
 		return nil, fmt.Errorf("get initial snapshot: %w", err)
@@ -169,7 +170,7 @@ func (s *VerificationService) GetVerificationStatus(ctx context.Context, submiss
 
 	latest, err := s.store.GetLatestSnapshotForSubmission(ctx, submissionID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return status, nil
 		}
 		return nil, fmt.Errorf("get latest snapshot: %w", err)

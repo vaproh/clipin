@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log/slog"
+	"strings"
+	"sync"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
 	"clipin/apps/api/internal/payout"
@@ -30,6 +33,7 @@ type PayoutStore interface {
 type PayoutService struct {
 	store    PayoutStore
 	provider payout.PayoutProvider
+	mu       sync.Mutex // serializes payout balance checks to prevent TOCTOU
 }
 
 // NewPayoutService creates a new PayoutService.
@@ -53,6 +57,12 @@ func (s *PayoutService) UpdateUPI(ctx context.Context, userID, upiID string) (*s
 	if upiID == "" {
 		return nil, fmt.Errorf("upi_id is required")
 	}
+	if len(upiID) < 3 || len(upiID) > 39 {
+		return nil, fmt.Errorf("invalid UPI ID format")
+	}
+	if !strings.Contains(upiID, "@") {
+		return nil, fmt.Errorf("invalid UPI ID format")
+	}
 	user, err := s.store.UpdateUserUPI(ctx, sqlc.UpdateUserUPIParams{
 		ID:    userID,
 		UpiID: pgtype.Text{Valid: true, String: upiID},
@@ -65,6 +75,10 @@ func (s *PayoutService) UpdateUPI(ctx context.Context, userID, upiID string) (*s
 
 // RequestPayout creates a payout request for the given clipper.
 func (s *PayoutService) RequestPayout(ctx context.Context, userID string, amount int64, idempotencyKey string) (*sqlc.PayoutRequest, error) {
+	// Serialize payout requests to prevent TOCTOU race on balance check.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	// Validate threshold.
 	if amount < minPayoutAmount {
 		return nil, ErrBelowThreshold
@@ -99,6 +113,10 @@ func (s *PayoutService) RequestPayout(ctx context.Context, userID string, amount
 		return nil, fmt.Errorf("generate uuid: %w", err)
 	}
 	id.Valid = true
+
+	if amount > int64(^uint32(0)) {
+		return nil, fmt.Errorf("payout amount too large")
+	}
 
 	// Create payout request. ON CONFLICT handles idempotency.
 	pr, err := s.store.CreatePayoutRequest(ctx, sqlc.CreatePayoutRequestParams{
@@ -156,14 +174,16 @@ func (s *PayoutService) RequestPayout(ctx context.Context, userID string, amount
 
 	// If completed, record a debit ledger entry.
 	if resp.Status == "completed" {
-		_, _ = s.store.CreateLedgerEntry(ctx, sqlc.CreateLedgerEntryParams{
+		if _, err := s.store.CreateLedgerEntry(ctx, sqlc.CreateLedgerEntryParams{
 			IdempotencyKey: fmt.Sprintf("payout:%s", idempotencyKey),
 			EntryType:      "payout",
 			CampaignID:     pgtype.UUID{}, // payout is not campaign-specific
 			Amount:         -int32(amount),
 			Description:    pgtype.Text{Valid: true, String: fmt.Sprintf("Payout of %d paise to %s", amount, user.UpiID.String)},
 			ClipperID:      pgtype.Text{Valid: true, String: userID},
-		})
+		}); err != nil {
+			slog.Error("payout ledger entry failed after provider success", "payout_id", fmt.Sprintf("%x", id.Bytes), "error", err)
+		}
 	}
 
 	return &updated, nil

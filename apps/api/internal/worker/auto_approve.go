@@ -24,7 +24,9 @@ func StartAutoApproveWorker(ctx context.Context, svc *service.SubmissionService,
 				log.Println("auto-approve worker stopped")
 				return
 			case <-ticker.C:
-				count, err := svc.AutoApprove(ctx)
+				tickCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+				count, err := svc.AutoApprove(tickCtx)
+				cancel()
 				if err != nil {
 					log.Printf("auto-approve worker error: %v", err)
 				} else if count > 0 {

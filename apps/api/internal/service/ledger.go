@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
 
@@ -105,7 +106,11 @@ func (s *LedgerService) RecordEarning(ctx context.Context, submissionID pgtype.U
 	}
 
 	// Calculate earnings: eligible_views * cpm_rate / 1000, integer division.
-	amount := int32((eligibleViews * int64(cpmRate)) / 1000)
+	raw := (eligibleViews * int64(cpmRate)) / 1000
+	if raw > math.MaxInt32 {
+		return nil, fmt.Errorf("earning amount exceeds maximum: %d", raw)
+	}
+	amount := int32(raw)
 	if amount <= 0 {
 		return nil, fmt.Errorf("calculated amount is zero: eligible_views=%d, cpm_rate=%d", eligibleViews, cpmRate)
 	}

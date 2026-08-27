@@ -11,6 +11,8 @@ import (
 )
 
 type Querier interface {
+	ApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error)
+	AutoApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error)
 	CountCampaignsFiltered(ctx context.Context, arg CountCampaignsFilteredParams) (int64, error)
 	CountFraudFlagsByUser(ctx context.Context, userID pgtype.Text) (int32, error)
 	CountSnapshotsBySubmission(ctx context.Context, submissionID pgtype.UUID) (int64, error)

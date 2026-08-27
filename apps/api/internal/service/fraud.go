@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -72,7 +73,7 @@ func (s *FraudService) ListOpenFlags(ctx context.Context) ([]sqlc.FraudFlag, err
 func (s *FraudService) ResolveFlag(ctx context.Context, flagID pgtype.UUID, resolvedBy, resolution string) (*sqlc.FraudFlag, error) {
 	flag, err := s.store.GetFraudFlagByID(ctx, flagID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFlagNotFound
 		}
 		return nil, fmt.Errorf("get fraud flag: %w", err)
@@ -95,7 +96,7 @@ func (s *FraudService) ResolveFlag(ctx context.Context, flagID pgtype.UUID, reso
 func (s *FraudService) DismissFlag(ctx context.Context, flagID pgtype.UUID, resolvedBy, reason string) (*sqlc.FraudFlag, error) {
 	flag, err := s.store.GetFraudFlagByID(ctx, flagID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrFlagNotFound
 		}
 		return nil, fmt.Errorf("get fraud flag: %w", err)

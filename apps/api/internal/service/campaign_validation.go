@@ -115,6 +115,14 @@ func ValidateCreateCampaign(in *CreateCampaignInput) error {
 		}
 	}
 
+	// starts_at: if provided, must be valid RFC3339
+	if in.StartsAt != nil {
+		_, err := time.Parse(time.RFC3339, *in.StartsAt)
+		if err != nil {
+			ve.Add("starts_at must be a valid RFC3339 timestamp")
+		}
+	}
+
 	// ends_at: if provided, must be after now
 	if in.EndsAt != nil {
 		t, err := time.Parse(time.RFC3339, *in.EndsAt)

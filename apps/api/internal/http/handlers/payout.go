@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -150,10 +149,8 @@ func RegisterPayoutHandlers(api huma.API, svc PayoutServiceInterface) {
 			return nil, huma.Error422UnprocessableEntity("amount must be positive")
 		}
 
-		// Generate idempotency key.
-		var idemBytes [16]byte
-		rand.Read(idemBytes[:])
-		idempotencyKey := fmt.Sprintf("payout:%s:%d:%x", user.ID, input.Body.Amount, idemBytes)
+		// Generate deterministic idempotency key (same user+amount = same key).
+		idempotencyKey := fmt.Sprintf("payout:%s:%d", user.ID, input.Body.Amount)
 
 		pr, err := svc.RequestPayout(ctx, user.ID, input.Body.Amount, idempotencyKey)
 		if err != nil {

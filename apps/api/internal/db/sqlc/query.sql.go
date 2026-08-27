@@ -11,6 +11,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const approveSubmission = `-- name: ApproveSubmission :execrows
+UPDATE submissions
+SET status = 'approved', approved_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND status = 'pending'
+`
+
+func (q *Queries) ApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, approveSubmission, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const autoApproveSubmission = `-- name: AutoApproveSubmission :execrows
+UPDATE submissions
+SET status = 'auto_approved', auto_approved_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND status = 'pending'
+`
+
+func (q *Queries) AutoApproveSubmission(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, autoApproveSubmission, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countCampaignsFiltered = `-- name: CountCampaignsFiltered :one
 SELECT COUNT(*) FROM campaigns
 WHERE status IN ('active', 'funded')

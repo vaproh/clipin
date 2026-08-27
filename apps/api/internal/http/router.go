@@ -159,7 +159,10 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		auditSvc := service.NewAuditService(deps.DB.Queries)
 		fraudSvc := service.NewFraudService(deps.DB.Queries)
-		handlers.RegisterAdminHandlers(authenticatedAPI, deps.DB.Queries, auditSvc, fraudSvc)
+		adminGroup := authenticated.Group(nil)
+		adminGroup.Use(auth.AdminOnly)
+		adminAPI := humachi.New(adminGroup, authCfg)
+		handlers.RegisterAdminHandlers(adminAPI, deps.DB.Queries, auditSvc, fraudSvc)
 	}
 
 	return r

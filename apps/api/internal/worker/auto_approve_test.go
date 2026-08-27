@@ -37,6 +37,12 @@ func (m *mockSubmissionStore) UpdateSubmissionStatus(ctx context.Context, arg sq
 	}
 	return sqlc.Submission{}, nil
 }
+func (m *mockSubmissionStore) ApproveSubmission(_ context.Context, _ pgtype.UUID) (int64, error) {
+	return 1, nil
+}
+func (m *mockSubmissionStore) AutoApproveSubmission(_ context.Context, _ pgtype.UUID) (int64, error) {
+	return 1, nil
+}
 func (m *mockSubmissionStore) ListSubmissionsByCampaign(_ context.Context, _ pgtype.UUID) ([]sqlc.Submission, error) {
 	return nil, nil
 }

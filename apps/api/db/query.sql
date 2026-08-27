@@ -136,6 +136,16 @@ SET status = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: ApproveSubmission :execrows
+UPDATE submissions
+SET status = 'approved', approved_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND status = 'pending';
+
+-- name: AutoApproveSubmission :execrows
+UPDATE submissions
+SET status = 'auto_approved', auto_approved_at = NOW(), updated_at = NOW()
+WHERE id = $1 AND status = 'pending';
+
 -- name: CountSubmissionsByCampaign :one
 SELECT COUNT(*) FROM submissions WHERE campaign_id = $1;
 

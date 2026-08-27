@@ -286,6 +286,58 @@ func (s *SubmissionService) Reject(ctx context.Context, submissionID pgtype.UUID
 	return &updated, nil
 }
 
+// BatchResult holds the aggregate outcome of a batch operation.
+type BatchResult struct {
+	Approved int            `json:"approved"`
+	Rejected int            `json:"rejected,omitempty"`
+	Failed   int            `json:"failed"`
+	Errors   []BatchItemErr `json:"errors,omitempty"`
+}
+
+// BatchItemErr records a single failure inside a batch operation.
+type BatchItemErr struct {
+	ID     string `json:"id"`
+	Reason string `json:"reason"`
+}
+
+// BatchApprove approves multiple pending submissions. Each item is processed
+// independently so partial success is possible.
+func (s *SubmissionService) BatchApprove(ctx context.Context, submissionIDs []pgtype.UUID, ownerID string) (*BatchResult, error) {
+	result := &BatchResult{}
+	for _, id := range submissionIDs {
+		_, err := s.Approve(ctx, id, ownerID)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, BatchItemErr{
+				ID:     fmt.Sprintf("%x", id.Bytes),
+				Reason: err.Error(),
+			})
+		} else {
+			result.Approved++
+		}
+	}
+	return result, nil
+}
+
+// BatchReject rejects multiple pending submissions with an optional reason.
+// Each item is processed independently so partial success is possible.
+func (s *SubmissionService) BatchReject(ctx context.Context, submissionIDs []pgtype.UUID, ownerID string, reason string) (*BatchResult, error) {
+	result := &BatchResult{}
+	for _, id := range submissionIDs {
+		_, err := s.Reject(ctx, id, ownerID, reason)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, BatchItemErr{
+				ID:     fmt.Sprintf("%x", id.Bytes),
+				Reason: err.Error(),
+			})
+		} else {
+			result.Rejected++
+		}
+	}
+	return result, nil
+}
+
 // AutoApprove finds pending submissions past their campaign's auto_approve_hours
 // and approves them. Returns the count of auto-approved submissions.
 func (s *SubmissionService) AutoApprove(ctx context.Context) (int, error) {

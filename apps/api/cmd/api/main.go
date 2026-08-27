@@ -63,7 +63,12 @@ func main() {
 		worker.StartAutoApproveWorker(workerCtx, submissionSvc, 5*time.Minute)
 
 		// Start payout processor worker with graceful shutdown.
-		payoutSvc := service.NewPayoutService(database.Queries, &payout.RazorpayStub{})
+		rp := payout.NewRazorpayProviderOrStub(
+			cfg.RazorpayKeyID,
+			cfg.RazorpayKeySecret,
+			cfg.RazorpayAccountNumber,
+		)
+		payoutSvc := service.NewPayoutService(database.Queries, rp)
 		worker.StartPayoutProcessorWorker(workerCtx, payoutSvc, 10*time.Minute)
 	}
 

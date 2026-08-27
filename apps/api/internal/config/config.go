@@ -15,6 +15,9 @@ type Config struct {
 	ClerkJWKSURL          string
 	VerifierAPIKey        string
 	AllowedOrigins        []string
+	RazorpayKeyID         string
+	RazorpayKeySecret     string
+	RazorpayAccountNumber string
 	RazorpayWebhookSecret string
 }
 
@@ -30,6 +33,9 @@ func Load() (*Config, error) {
 		ClerkJWKSURL:          getEnv("CLERK_JWKS_URL", ""),
 		VerifierAPIKey:        getEnv("VERIFIER_API_KEY", ""),
 		AllowedOrigins:        parseCSV(getEnv("ALLOWED_ORIGINS", "http://localhost:3000")),
+		RazorpayKeyID:         getEnv("RAZORPAY_KEY_ID", ""),
+		RazorpayKeySecret:     getEnv("RAZORPAY_KEY_SECRET", ""),
+		RazorpayAccountNumber: getEnv("RAZORPAY_ACCOUNT_NUMBER", ""),
 		RazorpayWebhookSecret: getEnv("RAZORPAY_WEBHOOK_SECRET", ""),
 	}
 

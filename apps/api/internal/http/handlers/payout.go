@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
 	"clipin/apps/api/internal/service"
@@ -222,10 +223,15 @@ func RegisterWebhookHandlers(api huma.API) {
 		Description: "Receives Razorpay webhook events. Signature verification is structured but disabled until keys are configured.",
 		Tags:        []string{"Webhooks"},
 	}, func(ctx context.Context, input *razorpayWebhookInput) (*razorpayWebhookOutput, error) {
-		// TODO: Verify signature with RAZORPAY_WEBHOOK_SECRET when keys exist.
-		// For now, log the event and acknowledge.
-		_ = input.Headers.XRazorpaySignature
-		_ = input.Headers.XRazorpayEvent
+		// Require signature header. Full HMAC verification requires raw body
+		// access which huma does not expose; implement when routing layer changes.
+		if input.Headers.XRazorpaySignature == "" {
+			return nil, huma.Error401Unauthorized("missing webhook signature")
+		}
+		slog.Info("razorpay webhook received",
+			"event", input.Headers.XRazorpayEvent,
+			"has_signature", true,
+		)
 
 		resp := &razorpayWebhookOutput{}
 		resp.Body.Status = "ok"

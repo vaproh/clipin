@@ -171,7 +171,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	}
 
 	if deps.DB != nil {
-		payoutSvc := service.NewPayoutService(deps.DB.Queries, &payout.RazorpayStub{})
+		rp := payout.NewRazorpayProviderOrStub(
+			deps.Config.RazorpayKeyID,
+			deps.Config.RazorpayKeySecret,
+			deps.Config.RazorpayAccountNumber,
+		)
+		payoutSvc := service.NewPayoutService(deps.DB.Queries, rp)
 		payoutSvc.WithNotifications(service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis))
 		handlers.RegisterPayoutHandlers(authenticatedAPI, payoutSvc)
 	}

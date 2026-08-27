@@ -59,14 +59,38 @@ api:
 verifier:
     cd services/verifier && go run ./cmd/verifier
 
-# Run tests across all projects
-test:
+# --- Testing ---
+
+# Run Go API tests
+test-api:
     @echo "==> Testing Go API..."
     cd apps/api && go test ./...
-    @echo "==> Testing Go Verifier..."
-    cd services/verifier && go test ./...
+
+# Run Go API tests with verbose output
+test-api-verbose:
+    cd apps/api && go test -v ./...
+
+# Run frontend unit tests (vitest)
+test-web:
     @echo "==> Testing Web Frontend..."
     cd apps/web && bun run test
+
+# Run Playwright E2E tests (starts dev server with E2E_TEST=true automatically)
+test-e2e:
+    @echo "==> Running Playwright E2E tests..."
+    cd apps/web && bun run e2e
+
+# Update Playwright visual QA baselines
+test-e2e-update:
+    @echo "==> Updating visual QA baselines..."
+    cd apps/web && bunx playwright test --update-snapshots
+
+# Run all unit/integration tests (API + frontend)
+test:
+    @just test-api
+    @just test-web
+
+# --- Linting & Formatting ---
 
 # Run linters across all projects
 lint:
@@ -86,6 +110,8 @@ format:
     @echo "==> Formatting Web Frontend..."
     cd apps/web && bun run format
 
+# --- Build ---
+
 # Build production artifacts for all projects
 build:
     @echo "==> Building Go API..."
@@ -97,4 +123,4 @@ build:
 
 # Clean build artifacts
 clean:
-    rm -rf apps/api/bin services/verifier/bin apps/web/.output apps/web/.nuxt
+    rm -rf apps/api/bin services/verifier/bin apps/web/.output apps/web/.nuxt apps/web/e2e-results apps/web/e2e-snapshots

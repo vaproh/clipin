@@ -14,12 +14,18 @@ yarn.lock
 dist/
 bin/
 *.exe
-*.exe?
 *.dll
 *.so
 *.dylib
-*.test
 *.out
+
+# Go
+apps/api/bin/
+services/verifier/bin/
+vendor/
+
+# sqlc generated (regenerate with sqlc generate)
+apps/api/internal/db/sqlc/
 
 # Environment & Secrets
 .env
@@ -44,5 +50,11 @@ redis_data/
 coverage/
 *.coverprofile
 
-# Playwright MCP artifacts
+# Test artifacts
+test-results/
+playwright-report/
+apps/web/e2e-results/
+apps/web/e2e-snapshots/
+
+# Playwright MCP
 .playwright-mcp/

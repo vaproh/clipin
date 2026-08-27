@@ -40,6 +40,7 @@ func RegisterHealthHandler(api huma.API, deps HealthCheckDependencies, env strin
 				resp.Body.Checks["postgres"] = "up"
 			} else {
 				resp.Body.Checks["postgres"] = "down"
+				resp.Body.Status = "degraded"
 			}
 
 			if deps.CheckRedis(ctx) {

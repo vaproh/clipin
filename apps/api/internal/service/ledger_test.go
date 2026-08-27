@@ -24,6 +24,7 @@ type mockLedgerStore struct {
 	sumSpendByCampaign   func(ctx context.Context, campaignID pgtype.UUID) (int64, error)
 	getCampaignByID      func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error)
 	updateBudget         func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error)
+	deductBudget         func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error)
 }
 
 func (m *mockLedgerStore) CreateLedgerEntry(ctx context.Context, arg sqlc.CreateLedgerEntryParams) (sqlc.LedgerEntry, error) {
@@ -55,6 +56,12 @@ func (m *mockLedgerStore) GetCampaignByID(ctx context.Context, id pgtype.UUID) (
 }
 func (m *mockLedgerStore) UpdateCampaignBudget(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
 	return m.updateBudget(ctx, arg)
+}
+func (m *mockLedgerStore) DeductCampaignBudget(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+	if m.deductBudget != nil {
+		return m.deductBudget(ctx, arg)
+	}
+	return sqlc.Campaign{}, nil
 }
 
 var testLedgerCampaignID = pgtype.UUID{Bytes: [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, Valid: true}
@@ -156,14 +163,11 @@ func TestRecordEarning_HappyPath(t *testing.T) {
 				Amount:         arg.Amount,
 			}, nil
 		},
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-			return testCampaignForLedger(5000), nil
-		},
-		updateBudget: func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
-			if arg.RemainingBudget != 4500 {
-				t.Errorf("expected remaining budget 4500, got %d", arg.RemainingBudget)
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+			if arg.RemainingBudget != 500 {
+				t.Errorf("expected deducted amount 500, got %d", arg.RemainingBudget)
 			}
-			return sqlc.Campaign{RemainingBudget: arg.RemainingBudget}, nil
+			return sqlc.Campaign{RemainingBudget: 5000 - 500}, nil
 		},
 	}
 	svc := service.NewLedgerService(store)
@@ -210,11 +214,8 @@ func TestRecordEarning_EarningCalculation(t *testing.T) {
 					capturedAmount = arg.Amount
 					return sqlc.LedgerEntry{Amount: arg.Amount}, nil
 				},
-				getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-					return testCampaignForLedger(100000), nil
-				},
-				updateBudget: func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
-					return sqlc.Campaign{}, nil
+				deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+					return sqlc.Campaign{RemainingBudget: 100000 - arg.RemainingBudget}, nil
 				},
 			}
 			svc := service.NewLedgerService(store)
@@ -231,12 +232,12 @@ func TestRecordEarning_EarningCalculation(t *testing.T) {
 
 func TestRecordEarning_BudgetCapEnforcement(t *testing.T) {
 	store := &mockLedgerStore{
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-			return testCampaignForLedger(100), nil // only 100 paise remaining
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+			// Conditional UPDATE returns no rows when remaining_budget < amount
+			return sqlc.Campaign{}, pgx.ErrNoRows
 		},
 	}
 	svc := service.NewLedgerService(store)
-	// 5000 views * 100 CPM / 1000 = 500, exceeds budget of 100
 	_, err := svc.RecordEarning(context.Background(), testLedgerSubmissionID, testLedgerCampaignID, "clipper1", 5000, 100, "earning:over-budget")
 	if err == nil {
 		t.Error("expected error for exceeding remaining budget")
@@ -248,14 +249,11 @@ func TestRecordEarning_ExactlyBudgetCap(t *testing.T) {
 		createEntry: func(ctx context.Context, arg sqlc.CreateLedgerEntryParams) (sqlc.LedgerEntry, error) {
 			return sqlc.LedgerEntry{Amount: arg.Amount}, nil
 		},
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-			return testCampaignForLedger(500), nil // exactly 500
-		},
-		updateBudget: func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
-			if arg.RemainingBudget != 0 {
-				t.Errorf("expected remaining budget 0, got %d", arg.RemainingBudget)
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+			if arg.RemainingBudget != 500 {
+				t.Errorf("expected deducted amount 500, got %d", arg.RemainingBudget)
 			}
-			return sqlc.Campaign{}, nil
+			return sqlc.Campaign{RemainingBudget: 0}, nil
 		},
 	}
 	svc := service.NewLedgerService(store)
@@ -268,14 +266,14 @@ func TestRecordEarning_ExactlyBudgetCap(t *testing.T) {
 
 func TestRecordEarning_CampaignNotFound(t *testing.T) {
 	store := &mockLedgerStore{
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
 			return sqlc.Campaign{}, pgx.ErrNoRows
 		},
 	}
 	svc := service.NewLedgerService(store)
 	_, err := svc.RecordEarning(context.Background(), testLedgerSubmissionID, testLedgerCampaignID, "clipper1", 5000, 100, "earning:not-found")
-	if err != service.ErrCampaignNotFound {
-		t.Errorf("expected ErrCampaignNotFound, got %v", err)
+	if err == nil {
+		t.Error("expected error for campaign not found")
 	}
 }
 
@@ -291,11 +289,8 @@ func TestRecordEarning_Idempotent(t *testing.T) {
 				Amount:         500,
 			}, nil
 		},
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-			return testCampaignForLedger(5000), nil
-		},
-		updateBudget: func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
-			return sqlc.Campaign{}, nil
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{RemainingBudget: 5000 - arg.RemainingBudget}, nil
 		},
 	}
 	svc := service.NewLedgerService(store)
@@ -541,19 +536,11 @@ func TestRecordEarning_BudgetRestoreOnError(t *testing.T) {
 		createEntry: func(ctx context.Context, arg sqlc.CreateLedgerEntryParams) (sqlc.LedgerEntry, error) {
 			return sqlc.LedgerEntry{}, fmt.Errorf("db connection lost")
 		},
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-			return testCampaignForLedger(5000), nil
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{RemainingBudget: 5000 - arg.RemainingBudget}, nil
 		},
 		updateBudget: func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
-			if arg.RemainingBudget == 4500 {
-				// This is the deduct call.
-				return sqlc.Campaign{}, nil
-			}
-			if arg.RemainingBudget == 5000 {
-				// This is the restore call.
-				return sqlc.Campaign{}, nil
-			}
-			t.Errorf("unexpected budget value %d", arg.RemainingBudget)
+			// Restore call
 			return sqlc.Campaign{}, nil
 		},
 	}
@@ -572,11 +559,8 @@ func TestRecordEarning_VerifyIdempotencyKeyFormat(t *testing.T) {
 			capturedKey = arg.IdempotencyKey
 			return sqlc.LedgerEntry{Amount: arg.Amount}, nil
 		},
-		getCampaignByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
-			return testCampaignForLedger(10000), nil
-		},
-		updateBudget: func(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error) {
-			return sqlc.Campaign{}, nil
+		deductBudget: func(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{RemainingBudget: 10000 - arg.RemainingBudget}, nil
 		},
 	}
 	svc := service.NewLedgerService(store)

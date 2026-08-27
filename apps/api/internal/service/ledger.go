@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -23,6 +24,7 @@ type LedgerStore interface {
 	SumSpendByCampaign(ctx context.Context, campaignID pgtype.UUID) (int64, error)
 	GetCampaignByID(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error)
 	UpdateCampaignBudget(ctx context.Context, arg sqlc.UpdateCampaignBudgetParams) (sqlc.Campaign, error)
+	DeductCampaignBudget(ctx context.Context, arg sqlc.DeductCampaignBudgetParams) (sqlc.Campaign, error)
 }
 
 // LedgerService implements the append-only financial ledger.
@@ -78,7 +80,7 @@ func (s *LedgerService) RecordPlatformFee(ctx context.Context, campaignID pgtype
 	})
 	if err != nil {
 		// ON CONFLICT DO NOTHING returns ErrNoRows when there's a conflict.
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			existing, findErr := s.store.GetLedgerEntryByIdempotencyKey(ctx, idempotencyKey)
 			if findErr != nil {
 				return nil, fmt.Errorf("get existing fee entry: %w", findErr)
@@ -108,29 +110,17 @@ func (s *LedgerService) RecordEarning(ctx context.Context, submissionID pgtype.U
 		return nil, fmt.Errorf("calculated amount is zero: eligible_views=%d, cpm_rate=%d", eligibleViews, cpmRate)
 	}
 
-	// Fetch campaign to check remaining budget.
-	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, ErrCampaignNotFound
-		}
-		return nil, fmt.Errorf("get campaign: %w", err)
-	}
-
-	// Budget cap: earnings cannot exceed remaining budget.
-	if amount > campaign.RemainingBudget {
-		return nil, fmt.Errorf("earning %d exceeds remaining budget %d", amount, campaign.RemainingBudget)
-	}
-
-	newRemaining := campaign.RemainingBudget - amount
-
-	// Update campaign remaining budget atomically.
-	_, err = s.store.UpdateCampaignBudget(ctx, sqlc.UpdateCampaignBudgetParams{
+	// Atomic budget deduction: the conditional UPDATE prevents double-spend.
+	// Only one concurrent call can succeed in deducting from a given budget.
+	campaign, err := s.store.DeductCampaignBudget(ctx, sqlc.DeductCampaignBudgetParams{
 		ID:              campaignID,
-		RemainingBudget: newRemaining,
+		RemainingBudget: amount,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("update campaign budget: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("campaign has insufficient budget or does not exist")
+		}
+		return nil, fmt.Errorf("deduct campaign budget: %w", err)
 	}
 
 	meta, _ := marshalMetadata(&ledgerMetadata{
@@ -150,18 +140,18 @@ func (s *LedgerService) RecordEarning(ctx context.Context, submissionID pgtype.U
 		Metadata:       meta,
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			// Idempotent duplicate. Restore budget since the entry already exists.
-			// This is safe because the original entry already deducted the budget.
-			// However, we should NOT restore - the original entry already did.
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Idempotent duplicate. Budget was already deducted by the
+			// concurrent call that created the original entry, so do
+			// not restore.
 			existing, findErr := s.store.GetLedgerEntryByIdempotencyKey(ctx, idempotencyKey)
 			if findErr != nil {
 				return nil, fmt.Errorf("get existing earning entry: %w", findErr)
 			}
 			return &existing, nil
 		}
-		// On any other error, restore the budget we deducted.
-		restoredErr := s.restoreBudget(ctx, campaignID, campaign.RemainingBudget)
+		// Ledger creation failed. Restore budget as compensating action.
+		restoredErr := s.restoreBudget(ctx, campaignID, campaign.RemainingBudget+amount)
 		if restoredErr != nil {
 			return nil, fmt.Errorf("create earning entry failed and budget restore failed: %w (original: %v)", restoredErr, err)
 		}
@@ -194,7 +184,7 @@ func (s *LedgerService) RecordRefund(ctx context.Context, campaignID pgtype.UUID
 		Description:    pgtype.Text{Valid: true, String: fmt.Sprintf("Refund of unspent budget (%d paise)", amount)},
 	})
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			existing, findErr := s.store.GetLedgerEntryByIdempotencyKey(ctx, idempotencyKey)
 			if findErr != nil {
 				return nil, fmt.Errorf("get existing refund entry: %w", findErr)
@@ -215,7 +205,7 @@ func (s *LedgerService) GetCampaignLedger(ctx context.Context, campaignID pgtype
 func (s *LedgerService) GetCampaignSummary(ctx context.Context, campaignID pgtype.UUID) (*CampaignSummary, error) {
 	campaign, err := s.store.GetCampaignByID(ctx, campaignID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrCampaignNotFound
 		}
 		return nil, fmt.Errorf("get campaign: %w", err)

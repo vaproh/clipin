@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
@@ -326,9 +327,18 @@ func RegisterAdminHandlers(
 		}
 
 		// Fetch related data.
-		submissions, _ := userStore.ListSubmissionsByUser(ctx, user.ID)
-		payouts, _ := userStore.ListPayoutsByUser(ctx, user.ID)
-		flags, _ := userStore.ListFraudFlagsByUser(ctx, pgtype.Text{Valid: true, String: user.ID})
+		submissions, err := userStore.ListSubmissionsByUser(ctx, user.ID)
+		if err != nil {
+			return nil, huma.Error500InternalServerError("failed to list user submissions")
+		}
+		payouts, err := userStore.ListPayoutsByUser(ctx, user.ID)
+		if err != nil {
+			return nil, huma.Error500InternalServerError("failed to list user payouts")
+		}
+		flags, err := userStore.ListFraudFlagsByUser(ctx, pgtype.Text{Valid: true, String: user.ID})
+		if err != nil {
+			return nil, huma.Error500InternalServerError("failed to list user fraud flags")
+		}
 
 		resp := &adminUserDetailOutput{}
 		resp.Body.User = item
@@ -398,7 +408,7 @@ func RegisterAdminHandlers(
 
 		flag, err := fraudSvc.ResolveFlag(ctx, flagID, admin.ID, input.Body.Resolution)
 		if err != nil {
-			if err == service.ErrFlagNotFound {
+			if errors.Is(err, service.ErrFlagNotFound) {
 				return nil, huma.Error404NotFound("fraud flag not found")
 			}
 			return nil, huma.Error500InternalServerError("failed to resolve flag")
@@ -430,7 +440,7 @@ func RegisterAdminHandlers(
 
 		flag, err := fraudSvc.DismissFlag(ctx, flagID, admin.ID, input.Body.Reason)
 		if err != nil {
-			if err == service.ErrFlagNotFound {
+			if errors.Is(err, service.ErrFlagNotFound) {
 				return nil, huma.Error404NotFound("fraud flag not found")
 			}
 			return nil, huma.Error500InternalServerError("failed to dismiss flag")

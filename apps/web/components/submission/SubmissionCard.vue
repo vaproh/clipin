@@ -7,6 +7,7 @@ const props = defineProps<{
   submission: Submission
   showActions?: boolean
   showVerification?: boolean
+  showClipper?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -49,6 +50,14 @@ function truncateUrl(url: string, max = 50): string {
             {{ platformLabel(submission.platform) }}
           </span>
           <SharedStatusBadge :status="submission.status" />
+          <NuxtLink
+            v-if="showClipper"
+            :to="`/app/clippers/${submission.clipper_id}`"
+            class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-neutral-900 text-neutral-500 border border-neutral-800 hover:text-white transition-colors shrink-0"
+            @click.stop
+          >
+            {{ submission.clipper_id.slice(0, 8) }}...
+          </NuxtLink>
         </div>
         <SubmissionVerificationBadge
           v-if="showVerification && isApproved && verificationStatus"

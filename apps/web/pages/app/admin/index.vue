@@ -216,8 +216,10 @@ function formatDateTime(iso: string) {
                 class="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/50 transition-colors"
               >
                 <td class="px-4 py-2.5">
-                  <div class="text-white truncate max-w-[200px]">{{ user.display_name || user.email }}</div>
-                  <div class="text-neutral-500 truncate max-w-[200px]">{{ user.email }}</div>
+                  <NuxtLink :to="`/app/clippers/${user.id}`" class="block hover:text-white transition-colors">
+                    <div class="text-white truncate max-w-[200px]">{{ user.display_name || user.email }}</div>
+                    <div class="text-neutral-500 truncate max-w-[200px]">{{ user.email }}</div>
+                  </NuxtLink>
                 </td>
                 <td class="px-4 py-2.5">
                   <SharedStatusBadge :status="user.role" />

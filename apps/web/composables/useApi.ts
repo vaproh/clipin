@@ -662,6 +662,39 @@ export function useDeleteNotification() {
 }
 
 // ---------------------------------------------------------------------------
+// Clipper Profile
+// ---------------------------------------------------------------------------
+
+export interface ClipperProfile {
+  id: string
+  display_name: string | null
+  avatar_url: string | null
+  bio: string | null
+  created_at: string
+  stats: {
+    total_submissions: number
+    approved_submissions: number
+    pending_submissions: number
+    rejected_submissions: number
+    total_views: number
+    total_earnings: number
+    campaigns_participated: number
+  }
+  social_accounts: Array<{ platform: string; platform_username: string | null }>
+}
+
+/** Fetch a public clipper profile by ID. */
+export function useClipperProfile(id: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['clipper', id],
+    queryFn: () => fetchApi<ClipperProfile>(`/clippers/${id.value}`),
+    enabled: () => !!id.value,
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
 

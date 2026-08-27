@@ -328,6 +328,7 @@ function relativeDate(dateStr: string | null): string {
             :submission="sub"
             show-actions
             show-verification
+            show-clipper
             @approve="handleApprove"
             @reject="handleRejectRequest"
           />

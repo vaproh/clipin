@@ -231,6 +231,24 @@ func TestSubmit_ClipperLimitExceeded(t *testing.T) {
 	}
 }
 
+func TestSubmit_CampaignLimitExceeded(t *testing.T) {
+	campaign := testActiveCampaign()
+	campaign.MaxClipsPerCampaign = pgtype.Int4{Valid: true, Int32: 10}
+	store := &mockSubmissionStore{
+		getCampaignByID: func(_ context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return campaign, nil
+		},
+		countByCampaign: func(_ context.Context, campaignID pgtype.UUID) (int64, error) {
+			return 10, nil // at the campaign limit
+		},
+	}
+	svc := service.NewSubmissionService(store)
+	_, err := svc.Submit(context.Background(), testCampaignID, "clipper1", "https://youtube.com/watch?v=abc", "youtube")
+	if err != service.ErrCampaignLimitExceeded {
+		t.Errorf("expected ErrCampaignLimitExceeded, got %v", err)
+	}
+}
+
 func TestApprove_HappyPath(t *testing.T) {
 	submission := sqlc.Submission{
 		ID:         testCampaignID,

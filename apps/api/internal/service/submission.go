@@ -46,13 +46,14 @@ func (s *SubmissionService) WithLedger(ledger *LedgerService) {
 
 // Sentinel errors for submission operations.
 var (
-	ErrSubmissionNotFound   = fmt.Errorf("submission not found")
-	ErrCampaignNotActive    = fmt.Errorf("campaign is not active")
-	ErrDuplicateSubmission  = fmt.Errorf("you have already submitted this URL for this campaign")
-	ErrClipperLimitExceeded = fmt.Errorf("you have reached the submission limit for this campaign")
-	ErrPlatformMismatch     = fmt.Errorf("submission platform does not match campaign platform")
-	ErrInvalidURL           = fmt.Errorf("invalid post URL")
-	ErrSubmissionNotPending = fmt.Errorf("submission is not in pending status")
+	ErrSubmissionNotFound    = fmt.Errorf("submission not found")
+	ErrCampaignNotActive     = fmt.Errorf("campaign is not active")
+	ErrDuplicateSubmission   = fmt.Errorf("you have already submitted this URL for this campaign")
+	ErrClipperLimitExceeded  = fmt.Errorf("you have reached the submission limit for this campaign")
+	ErrCampaignLimitExceeded = fmt.Errorf("campaign has reached its maximum submissions limit")
+	ErrPlatformMismatch      = fmt.Errorf("submission platform does not match campaign platform")
+	ErrInvalidURL            = fmt.Errorf("invalid post URL")
+	ErrSubmissionNotPending  = fmt.Errorf("submission is not in pending status")
 )
 
 // Submit creates a new submission with validation.
@@ -85,6 +86,17 @@ func (s *SubmissionService) Submit(ctx context.Context, campaignID pgtype.UUID, 
 	// Platform must match campaign (unless campaign is multi).
 	if campaign.Platform != "multi" && campaign.Platform != platform {
 		return nil, ErrPlatformMismatch
+	}
+
+	// Check campaign submission limit.
+	if campaign.MaxClipsPerCampaign.Valid {
+		count, err := s.store.CountSubmissionsByCampaign(ctx, campaignID)
+		if err != nil {
+			return nil, fmt.Errorf("count campaign submissions: %w", err)
+		}
+		if int32(count) >= campaign.MaxClipsPerCampaign.Int32 {
+			return nil, ErrCampaignLimitExceeded
+		}
 	}
 
 	// Check clipper submission limit.

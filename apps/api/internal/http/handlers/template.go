@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	"clipin/apps/api/internal/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,6 +16,8 @@ type TemplateServiceInterface interface {
 	ListTemplates(ctx context.Context) ([]sqlc.CampaignTemplate, error)
 	GetTemplateByID(ctx context.Context, id pgtype.UUID) (*sqlc.CampaignTemplate, error)
 	CreateTemplate(ctx context.Context, name, platform string, cpmRate, totalBudget int32, maxClipsPerClipper, minViewsPerClip, autoApproveHours int32, descriptionTemplate string) (*sqlc.CampaignTemplate, error)
+	UpdateTemplate(ctx context.Context, id pgtype.UUID, name, platform string, cpmRate, totalBudget int32, maxClipsPerClipper, minViewsPerClip, autoApproveHours int32, descriptionTemplate string) (*sqlc.CampaignTemplate, error)
+	DeleteTemplate(ctx context.Context, id pgtype.UUID) error
 }
 
 type templateItem struct {
@@ -142,6 +145,96 @@ func RegisterTemplateHandlers(api huma.API, svc TemplateServiceInterface) {
 		resp.Body = toTemplateItem(*template)
 		return resp, nil
 	})
+
+	// PATCH /admin/templates/{id} - admin-only update
+	huma.Register(api, huma.Operation{
+		OperationID: "update-template",
+		Method:      "PATCH",
+		Path:        "/admin/templates/{id}",
+		Summary:     "Update a campaign template (admin)",
+		Description: "Updates an existing campaign template. Admin only.",
+		Tags:        []string{"Templates"},
+	}, func(ctx context.Context, input *updateTemplateInput) (*templateOutput, error) {
+		if _, err := requireAdmin(ctx); err != nil {
+			return nil, err
+		}
+
+		id, err := parseTemplateID(input.ID)
+		if err != nil {
+			return nil, huma.Error422UnprocessableEntity("invalid template id")
+		}
+
+		if input.Body.Name == "" {
+			return nil, huma.Error422UnprocessableEntity("name is required")
+		}
+		if input.Body.CpmRate <= 0 {
+			return nil, huma.Error422UnprocessableEntity("cpm_rate must be positive")
+		}
+		if input.Body.TotalBudget <= 0 {
+			return nil, huma.Error422UnprocessableEntity("total_budget must be positive")
+		}
+
+		var maxClips, minViews, autoApprove int32
+		if input.Body.MaxClipsPerClipper != nil {
+			maxClips = *input.Body.MaxClipsPerClipper
+		}
+		if input.Body.MinViewsPerClip != nil {
+			minViews = *input.Body.MinViewsPerClip
+		}
+		if input.Body.AutoApproveHours != nil {
+			autoApprove = *input.Body.AutoApproveHours
+		}
+		var descTpl string
+		if input.Body.DescriptionTemplate != nil {
+			descTpl = *input.Body.DescriptionTemplate
+		}
+
+		template, err := svc.UpdateTemplate(ctx, id,
+			input.Body.Name,
+			input.Body.Platform,
+			input.Body.CpmRate,
+			input.Body.TotalBudget,
+			maxClips,
+			minViews,
+			autoApprove,
+			descTpl,
+		)
+		if err != nil {
+			if err == service.ErrTemplateNotFound {
+				return nil, huma.Error404NotFound("template not found")
+			}
+			return nil, huma.Error500InternalServerError("failed to update template")
+		}
+
+		resp := &templateOutput{}
+		resp.Body = toTemplateItem(*template)
+		return resp, nil
+	})
+
+	// DELETE /admin/templates/{id} - admin-only delete
+	huma.Register(api, huma.Operation{
+		OperationID: "delete-template",
+		Method:      "DELETE",
+		Path:        "/admin/templates/{id}",
+		Summary:     "Delete a campaign template (admin)",
+		Description: "Deletes a campaign template. Admin only.",
+		Tags:        []string{"Templates"},
+	}, func(ctx context.Context, input *deleteTemplateInput) (*struct{}, error) {
+		if _, err := requireAdmin(ctx); err != nil {
+			return nil, err
+		}
+
+		id, err := parseTemplateID(input.ID)
+		if err != nil {
+			return nil, huma.Error422UnprocessableEntity("invalid template id")
+		}
+
+		if err := svc.DeleteTemplate(ctx, id); err != nil {
+			return nil, huma.Error500InternalServerError("failed to delete template")
+		}
+
+		return &struct{}{}, nil
+	})
 }
 
 type createTemplateInput struct {
@@ -165,4 +258,30 @@ type listTemplatesOutput struct {
 
 type templateOutput struct {
 	Body templateItem
+}
+
+type updateTemplateInput struct {
+	ID   string `path:"id" doc:"Template ID"`
+	Body struct {
+		Name                string `json:"name" doc:"Template name"`
+		Platform            string `json:"platform" doc:"Platform (youtube, instagram, tiktok, multi)"`
+		CpmRate             int32  `json:"cpm_rate" doc:"CPM rate in paise"`
+		TotalBudget         int32  `json:"total_budget" doc:"Total budget in paise"`
+		MaxClipsPerClipper  *int32 `json:"max_clips_per_clipper,omitempty" doc:"Max clips per clipper"`
+		MinViewsPerClip     *int32 `json:"min_views_per_clip,omitempty" doc:"Min views per clip"`
+		AutoApproveHours    *int32 `json:"auto_approve_hours,omitempty" doc:"Auto-approve after hours"`
+		DescriptionTemplate *string `json:"description_template,omitempty" doc:"Description template text"`
+	}
+}
+
+type deleteTemplateInput struct {
+	ID string `path:"id" doc:"Template ID"`
+}
+
+func parseTemplateID(raw string) (pgtype.UUID, error) {
+	var id pgtype.UUID
+	if err := id.Scan(raw); err != nil {
+		return pgtype.UUID{}, fmt.Errorf("invalid template id")
+	}
+	return id, nil
 }

@@ -12,9 +12,12 @@ import (
 )
 
 type mockTemplateStore struct {
-	list   func(ctx context.Context) ([]sqlc.CampaignTemplate, error)
+	list    func(ctx context.Context) ([]sqlc.CampaignTemplate, error)
 	getByID func(ctx context.Context, id pgtype.UUID) (sqlc.CampaignTemplate, error)
-	create func(ctx context.Context, arg sqlc.CreateCampaignTemplateParams) (sqlc.CampaignTemplate, error)
+	create  func(ctx context.Context, arg sqlc.CreateCampaignTemplateParams) (sqlc.CampaignTemplate, error)
+	update  func(ctx context.Context, arg sqlc.UpdateCampaignTemplateParams) (sqlc.CampaignTemplate, error)
+	delete  func(ctx context.Context, id pgtype.UUID) error
+	count   func(ctx context.Context) (int32, error)
 }
 
 func (m *mockTemplateStore) ListCampaignTemplates(ctx context.Context) ([]sqlc.CampaignTemplate, error) {
@@ -41,6 +44,32 @@ func (m *mockTemplateStore) CreateCampaignTemplate(ctx context.Context, arg sqlc
 		Platform: arg.Platform,
 		CpmRate:  arg.CpmRate,
 	}, nil
+}
+
+func (m *mockTemplateStore) UpdateCampaignTemplate(ctx context.Context, arg sqlc.UpdateCampaignTemplateParams) (sqlc.CampaignTemplate, error) {
+	if m.update != nil {
+		return m.update(ctx, arg)
+	}
+	return sqlc.CampaignTemplate{
+		ID:       arg.ID,
+		Name:     arg.Name,
+		Platform: arg.Platform,
+		CpmRate:  arg.CpmRate,
+	}, nil
+}
+
+func (m *mockTemplateStore) DeleteCampaignTemplate(ctx context.Context, id pgtype.UUID) error {
+	if m.delete != nil {
+		return m.delete(ctx, id)
+	}
+	return nil
+}
+
+func (m *mockTemplateStore) CountCampaignTemplates(ctx context.Context) (int32, error) {
+	if m.count != nil {
+		return m.count(ctx)
+	}
+	return 0, nil
 }
 
 func TestTemplateList(t *testing.T) {
@@ -155,5 +184,138 @@ func TestTemplateCreateDefaultPlatform(t *testing.T) {
 	_, err := svc.CreateTemplate(context.Background(), "Test", "", 150, 10000, 3, 1000, 48, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTemplateUpdate(t *testing.T) {
+	id := pgtype.UUID{Bytes: [16]byte{7}, Valid: true}
+	store := &mockTemplateStore{
+		update: func(_ context.Context, arg sqlc.UpdateCampaignTemplateParams) (sqlc.CampaignTemplate, error) {
+			if arg.ID != id {
+				t.Errorf("expected ID %v, got %v", id, arg.ID)
+			}
+			if arg.Name != "Updated Name" {
+				t.Errorf("expected Updated Name, got %s", arg.Name)
+			}
+			if arg.CpmRate != 300 {
+				t.Errorf("expected cpm 300, got %d", arg.CpmRate)
+			}
+			return sqlc.CampaignTemplate{
+				ID:       arg.ID,
+				Name:     arg.Name,
+				Platform: arg.Platform,
+				CpmRate:  arg.CpmRate,
+			}, nil
+		},
+	}
+	svc := service.NewTemplateService(store)
+	tmpl, err := svc.UpdateTemplate(context.Background(), id, "Updated Name", "youtube", 300, 50000, 3, 1000, 48, "new desc")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tmpl.Name != "Updated Name" {
+		t.Errorf("expected Updated Name, got %s", tmpl.Name)
+	}
+	if tmpl.CpmRate != 300 {
+		t.Errorf("expected cpm 300, got %d", tmpl.CpmRate)
+	}
+}
+
+func TestTemplateUpdateEmptyName(t *testing.T) {
+	store := &mockTemplateStore{}
+	svc := service.NewTemplateService(store)
+	_, err := svc.UpdateTemplate(context.Background(), pgtype.UUID{Bytes: [16]byte{1}, Valid: true}, "", "youtube", 150, 10000, 3, 1000, 48, "")
+	if err == nil {
+		t.Error("expected error for empty name")
+	}
+}
+
+func TestTemplateUpdateNotFound(t *testing.T) {
+	store := &mockTemplateStore{
+		update: func(_ context.Context, _ sqlc.UpdateCampaignTemplateParams) (sqlc.CampaignTemplate, error) {
+			return sqlc.CampaignTemplate{}, pgx.ErrNoRows
+		},
+	}
+	svc := service.NewTemplateService(store)
+	_, err := svc.UpdateTemplate(context.Background(), pgtype.UUID{Bytes: [16]byte{99}, Valid: true}, "Name", "youtube", 150, 10000, 3, 1000, 48, "")
+	if err != service.ErrTemplateNotFound {
+		t.Errorf("expected ErrTemplateNotFound, got %v", err)
+	}
+}
+
+func TestTemplateDelete(t *testing.T) {
+	id := pgtype.UUID{Bytes: [16]byte{5}, Valid: true}
+	var deletedID pgtype.UUID
+	store := &mockTemplateStore{
+		delete: func(_ context.Context, delID pgtype.UUID) error {
+			deletedID = delID
+			return nil
+		},
+	}
+	svc := service.NewTemplateService(store)
+	err := svc.DeleteTemplate(context.Background(), id)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if deletedID != id {
+		t.Errorf("expected delete ID %v, got %v", id, deletedID)
+	}
+}
+
+func TestSeedDefaultTemplates(t *testing.T) {
+	var created []string
+	store := &mockTemplateStore{
+		count: func(_ context.Context) (int32, error) {
+			return 0, nil
+		},
+		create: func(_ context.Context, arg sqlc.CreateCampaignTemplateParams) (sqlc.CampaignTemplate, error) {
+			created = append(created, arg.Name)
+			return sqlc.CampaignTemplate{
+				ID:       pgtype.UUID{Bytes: [16]byte{1}, Valid: true},
+				Name:     arg.Name,
+				Platform: arg.Platform,
+				CpmRate:  arg.CpmRate,
+			}, nil
+		},
+	}
+	svc := service.NewTemplateService(store)
+	err := svc.SeedDefaultTemplates(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(created) != 4 {
+		t.Fatalf("expected 4 templates seeded, got %d", len(created))
+	}
+	expected := []string{
+		"YouTube Short - Gaming",
+		"Instagram Reel - Lifestyle",
+		"TikTok - Trending",
+		"Multi-platform - Brand",
+	}
+	for i, name := range expected {
+		if created[i] != name {
+			t.Errorf("template %d: expected %q, got %q", i, name, created[i])
+		}
+	}
+}
+
+func TestSeedDefaultTemplates_AlreadySeeded(t *testing.T) {
+	createCalled := false
+	store := &mockTemplateStore{
+		count: func(_ context.Context) (int32, error) {
+			return 4, nil
+		},
+		create: func(_ context.Context, _ sqlc.CreateCampaignTemplateParams) (sqlc.CampaignTemplate, error) {
+			createCalled = true
+			return sqlc.CampaignTemplate{}, nil
+		},
+	}
+	svc := service.NewTemplateService(store)
+	err := svc.SeedDefaultTemplates(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if createCalled {
+		t.Error("expected no creates when templates already exist")
 	}
 }

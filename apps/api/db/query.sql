@@ -447,6 +447,20 @@ INSERT INTO campaign_templates (name, platform, cpm_rate, total_budget, max_clip
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 
+-- name: UpdateCampaignTemplate :one
+UPDATE campaign_templates
+SET name = $2, platform = $3, cpm_rate = $4, total_budget = $5,
+    max_clips_per_clipper = $6, min_views_per_clip = $7, auto_approve_hours = $8,
+    description_template = $9
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteCampaignTemplate :exec
+DELETE FROM campaign_templates WHERE id = $1;
+
+-- name: CountCampaignTemplates :one
+SELECT COUNT(*)::int FROM campaign_templates;
+
 -- Campaign analytics queries
 
 -- name: GetCampaignSubmissionStats :one

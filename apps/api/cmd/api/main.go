@@ -50,6 +50,12 @@ func main() {
 		defer database.Close()
 		log.Println("PostgreSQL connection pool initialized")
 
+		// Seed default campaign templates (idempotent).
+		templateSvc := service.NewTemplateService(database.Queries)
+		if err := templateSvc.SeedDefaultTemplates(context.Background()); err != nil {
+			log.Printf("Warning: Failed to seed default templates: %v", err)
+		}
+
 		// Start auto-approve worker with graceful shutdown.
 		workerCtx, workerCancel := context.WithCancel(context.Background())
 		defer workerCancel()

@@ -194,14 +194,25 @@ Always follow the TDD development workflow:
 2. Then write the feature code to satisfy the test.
 3. Then test, fix, and complete.
 
-At minimum:
+#### Backend
 
-- unit tests for business-critical logic
-- API tests for important workflows
-- database/integration tests where state transitions matter
-- tests for ledger arithmetic
-- tests for campaign budget calculations
-- tests for idempotency and payout state transitions
+- Unit tests with Go `testing` + `httptest` (191+ tests)
+- Service tests mock DB interfaces
+- Financial-critical paths thoroughly tested (ledger arithmetic, budget caps, idempotency)
+
+#### Frontend
+
+- Unit tests with Vitest + @vue/test-utils + happy-dom (23+ tests)
+- Test composables, utilities, and shared components
+- Run: `cd apps/web && npx vitest run`
+
+#### E2E
+
+- Playwright for end-to-end testing + visual QA
+- Desktop (1280x720) and mobile (iPhone 13) projects
+- Clerk stub module enables testing without a live auth instance
+- Run: `cd apps/web && npx playwright test`
+- Update baselines: `cd apps/web && npx playwright test --update-snapshots`
 
 ### 14. Observability
 
@@ -294,7 +305,7 @@ Razorpay stubbed behind a `PayoutProvider` interface until the account is availa
 
 ### UI approach
 
-shadcn-vue installed just-in-time per milestone. Shared primitives (PageHeader, StatCard, StatusBadge, Money formatter, DataTable, EmptyState) built as each page needs them. Design system tokens already exist in `tailwind.config.js` + `main.css`. Playwright browser testing on every new screen.
+shadcn-vue installed just-in-time per milestone. Shared primitives (PageHeader, StatCard, StatusBadge, EmptyState) built as each page needs them. Design system tokens in `tailwind.config.js` + `main.css`. Vitest unit tests for components and composables. Playwright E2E + visual QA on every new screen (desktop + mobile).
 
 ### Deployment
 
@@ -304,15 +315,15 @@ Excluded from current scope. Planned separately when production VPS / Cloudflare
 
 Sequential by milestone. Within each: tests first (TDD), small conventional commits, migrations clean, builds green, Playwright visual QA before moving on.
 
-| Milestone | Scope |
-|---|---|
-| M0 | Foundation: migrations, sqlc, Clerk JWT, CI, CORS, docs |
-| M1 | Users, roles, onboarding, first shared UI primitives |
-| M2 | Campaign marketplace: schema, listing, filters, detail |
-| M3 | Campaign creation wizard + owner dashboard |
-| M4 | Submissions: lifecycle, review, dedupe |
-| M5 | Verification contract: snapshot table, deltas, status |
-| M6 | Financial ledger: append-only, eligible views, fee, caps |
-| M7 | Payouts: UPI, stubbed provider, webhook endpoint |
-| M8 | Admin controls, fraud flags, audit logs |
-| M9 | Launch polish: SEO, notifications, perf |
+| Milestone | Scope | Status |
+|---|---|---|
+| M0 | Foundation: migrations, sqlc, Clerk JWT, CI, CORS, docs | Done |
+| M1 | Users, roles, onboarding, first shared UI primitives | Done |
+| M2 | Campaign marketplace: schema, listing, filters, detail | Done |
+| M3 | Campaign creation wizard + owner dashboard | Done |
+| M4 | Submissions: lifecycle, review, dedupe | Done |
+| M5 | Verification contract: snapshot table, deltas, status | Done |
+| M6 | Financial ledger: append-only, eligible views, fee, caps | Done |
+| M7 | Payouts: UPI, stubbed provider, webhook endpoint | Done |
+| M8 | Admin controls, fraud flags, audit logs | Done |
+| M9 | Launch polish: SEO, notifications, perf | Done |

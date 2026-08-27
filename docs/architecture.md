@@ -45,11 +45,11 @@
 
 ## Data flow
 
-1. **Campaign creation**: owner creates campaign → admin approves → owner deposits funds → campaign goes live.
-2. **Clipper submission**: clipper joins campaign → clips source content → publishes to own account → submits post URL → owner reviews (approve/reject/auto-approve after 48h).
-3. **Verification**: verifier service fetches metrics from social platforms → writes snapshots to `metric_snapshots` table.
-4. **Earnings**: main backend reads snapshots → computes growth deltas and eligible views per snapshot window → creates ledger entries (earnings minus fee).
-5. **Payout**: clipper requests withdrawal → payout provider executes → ledger updated with payout completion/failure.
+1. **Campaign creation**: owner creates campaign (validated, platform fee calculated) → campaign goes live with funded status.
+2. **Clipper submission**: clipper submits post URL → dedup check, clipper limit check → pending → owner reviews (approve/reject) or auto-approve after N hours.
+3. **Verification**: verifier polls submission URLs → writes snapshots to `metric_snapshots` via internal API (X-Verifier-Key auth).
+4. **Earnings**: main backend reads snapshots → computes eligible views (delta × CPM) → creates idempotent ledger entries → updates campaign remaining budget.
+5. **Payout**: clipper requests withdrawal (₹500 min) → Razorpay stub processes → ledger updated with payout entry.
 
 ## Key boundaries
 
@@ -62,3 +62,17 @@
 
 - `public.*` (users, profiles, roles, social_accounts, campaigns, submissions, ledger_entries, withdrawals, audit_logs) — owned by the main API.
 - `public.metric_snapshots` — written by the verifier, read by the main API for earnings computation.
+
+## Testing
+
+- **Backend**: Go `testing` + `httptest` (191 tests across 13 packages). Service tests mock DB interfaces.
+- **Frontend**: Vitest + @vue/test-utils (23 tests). Utility and component smoke tests.
+- **E2E**: Playwright with desktop + mobile projects (57 tests). Clerk stub module for testing without live auth instance. Visual QA with screenshot baselines.
+
+Test commands:
+```bash
+just test-api        # Go backend tests
+just test-web        # Vitest frontend tests
+just test-e2e        # Playwright E2E + visual QA
+just test            # all unit/integration tests
+```

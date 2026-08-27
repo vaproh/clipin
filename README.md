@@ -7,7 +7,7 @@ India's performance clipping marketplace.
 ### Frontend
 
 - Bun
-- Nuxt
+- Nuxt 3
 - Vue 3
 - TypeScript
 - Tailwind CSS
@@ -17,34 +17,37 @@ India's performance clipping marketplace.
 - TanStack Query
 - Zod
 - VueUse
-- Clerk
+- Clerk (authentication)
 
 ### Backend
 
-- Go
-- net/http
+- Go 1.24
 - chi
-- Huma
+- Huma (OpenAPI)
 - pgx
 - sqlc
-- PostgreSQL
-- Redis
+- PostgreSQL 16
+- Redis 7
+
+### Testing
+
+- Go `testing` + `httptest`
+- Vitest + @vue/test-utils + happy-dom
+- Playwright (E2E + visual QA)
 
 ### External
 
 - Clerk Auth
-- Razorpay
+- Razorpay (stubbed)
 - Cloudflare
-- Social verification integrations
 
 ## Local development
 
 Prerequisites:
 
 - Bun
-- Go
-- Docker
-- Docker Compose
+- Go 1.24+
+- Docker & Docker Compose
 - just
 
 Start databases:
@@ -59,75 +62,118 @@ Run frontend dev server:
 just dev-frontend
 ```
 
-Run backend dev services (PostgreSQL, Redis, Go API, Go Verifier):
+Run backend dev services:
 
 ```bash
 just dev-backend
 ```
 
-Run all dev servers:
+Run everything:
 
 ```bash
 just dev
 ```
 
-Run individual services:
+Individual services:
 
 ```bash
-just web        # Nuxt frontend
-just api        # Go API server
-just verifier   # Go verifier service
+just web        # Nuxt frontend (http://localhost:3000)
+just api        # Go API (http://localhost:8080)
+just verifier   # Go verifier (http://localhost:8081)
 ```
 
-Run checks:
+Database migrations:
+
+```bash
+just migrate            # run all pending
+just migrate status     # check current version
+just migrate down       # rollback one
+```
+
+## Testing
+
+Run all unit/integration tests:
 
 ```bash
 just test
-just lint
-just format
-just build
+```
+
+Individual test suites:
+
+```bash
+just test-api       # Go backend (191 tests)
+just test-web       # Vitest frontend (23 tests)
+just test-e2e       # Playwright E2E (57 tests)
+```
+
+Update visual QA baselines:
+
+```bash
+just test-e2e-update
 ```
 
 ## Current scope
 
 Open marketplace for performance clipping campaigns. Content owners fund escrow pools, clippers publish short-form clips, verified views drive earnings and UPI payouts.
 
-All milestones M0-M9 are complete. Deployment excluded until production infra exists.
+All milestones M0-M9 are complete. Mobile-optimized. Testing infrastructure in place. Deployment excluded until production infra exists.
 
 | Milestone | Deliverable | Status |
 |---|---|---|
-| M0 | Foundation: migrations, sqlc, Clerk JWT middleware, CI | Done |
-| M1 | Users, roles, onboarding | Done |
-| M2 | Campaign marketplace (list, filters, detail) | Done |
-| M3 | Campaign creation + owner dashboard | Done |
-| M4 | Submissions (lifecycle, review, dedupe) | Done |
-| M5 | Verification contract (snapshots, deltas, eligible views) | Done |
-| M6 | Append-only financial ledger | Done |
-| M7 | Payouts (UPI, stubbed Razorpay) | Done |
-| M8 | Admin controls, fraud flags, audit logs | Done |
+| M0 | Foundation: migrations, sqlc, Clerk JWT, CORS, CI | Done |
+| M1 | Users, roles, onboarding, shared UI primitives | Done |
+| M2 | Campaign marketplace (list, filters, detail, cache) | Done |
+| M3 | Campaign creation wizard + owner dashboard | Done |
+| M4 | Submissions (lifecycle, review, dedupe, auto-approve) | Done |
+| M5 | Verification contract (metric snapshots, deltas) | Done |
+| M6 | Append-only financial ledger (idempotent entries) | Done |
+| M7 | Payouts (UPI, stubbed Razorpay, webhook) | Done |
+| M8 | Admin controls, fraud flags, audit logs, rate limiting | Done |
 | M9 | Launch polish (SEO, meta tags, build verification) | Done |
+| Mobile | Hamburger drawer, touch targets, overflow fixes | Done |
+| Testing | Vitest unit tests, Playwright E2E + visual QA | Done |
 
 ## Repository structure
 
 ```text
 apps/
-  web/          # Nuxt 3 frontend
-  api/          # Go API server
+  web/                  # Nuxt 3 frontend
+    components/         # Vue components (app/, campaign/, landing/, ledger/, shared/, submission/, ui/)
+    composables/        # TanStack Query composables
+    e2e/                # Playwright E2E + visual QA tests
+    layouts/            # Nuxt layouts (default, app)
+    pages/              # Nuxt pages (landing, auth, app/*)
+    lib/                # Utilities (formatPaise, cn)
+    assets/css/         # Tailwind + design tokens
+    vitest.config.ts    # Vitest configuration
+    playwright.config.ts # Playwright configuration
+
+  api/                  # Go API server
+    cmd/api/            # API entrypoint
+    cmd/migrate/        # Migration CLI (up/down/status/goto)
+    db/migrations/      # SQL migrations (000001-000008)
+    db/query.sql        # sqlc query definitions
+    internal/
+      auth/             # JWT + session middleware
+      config/           # Environment configuration
+      db/sqlc/          # Generated models + queries
+      http/handlers/    # Huma handlers (health, user, campaign, submission, verification, ledger, payout, admin)
+      middleware/        # Rate limiter
+      payout/           # PayoutProvider interface + Razorpay stub
+      redis/            # Redis client
+      service/          # Business logic (campaign, submission, verification, ledger, payout, audit, fraud)
+      worker/           # Background workers (auto-approve, payout processor)
 
 services/
-  verifier/     # View verification service (owned externally)
-
-infra/
-  docker/       # Dockerfiles (empty until deployment)
+  verifier/             # View verification service (externally owned)
 
 docs/
   architecture.md
   verification-contract.md
 
-PRD.md          # Product requirements
-AGENTS.md       # Engineering principles + execution plan
-DESIGN.md       # Design system tokens
-README.md
-justfile
-docker-compose.yml
+PRD.md                  # Product requirements
+AGENTS.md               # Engineering principles + execution plan
+justfile                # Developer commands
+docker-compose.yml      # PostgreSQL + Redis
+.env.example            # Environment template
 ```

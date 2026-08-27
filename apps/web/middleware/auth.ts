@@ -8,6 +8,9 @@ export default defineNuxtRouteMiddleware((to) => {
   const { userId } = useAuth()
 
   if (!userId.value) {
-    return navigateTo(`/sign-in?redirect_url=${encodeURIComponent(to.fullPath)}`)
+    const returnPath = to.fullPath.startsWith('/') && !to.fullPath.startsWith('//')
+      ? to.fullPath
+      : '/app'
+    return navigateTo(`/sign-in?redirect_url=${encodeURIComponent(returnPath)}`)
   }
 })

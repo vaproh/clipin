@@ -66,7 +66,12 @@ export function useApi() {
 
     const res = await fetch(`${config.public.apiBase}${path}`, { ...options, headers })
     if (!res.ok) {
-      throw new Error(`API ${res.status} on ${path}`)
+      const body = await res.json().catch(() => null) as Record<string, unknown> | null
+      const serverMsg = typeof body?.error === 'string' ? body.error : typeof body?.message === 'string' ? body.message : null
+      const message = res.status >= 500
+        ? 'Something went wrong. Please try again.'
+        : (serverMsg || `Request failed (${res.status})`)
+      throw new Error(message)
     }
     return res.status === 204 ? (undefined as T) : (res.json() as Promise<T>)
   }

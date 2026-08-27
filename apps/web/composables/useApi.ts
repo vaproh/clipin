@@ -746,6 +746,29 @@ export function useDeleteNotification() {
 }
 
 // ---------------------------------------------------------------------------
+// Leaderboard
+// ---------------------------------------------------------------------------
+
+export interface LeaderboardEntry {
+  rank: number
+  user_id: string
+  display_name: string | null
+  avatar_url: string | null
+  total_earnings: number
+  total_submissions: number
+  campaigns_participated: number
+}
+
+export function useLeaderboard(sort: Ref<string> = ref('earnings'), limit: number = 20) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['leaderboard', sort, limit],
+    queryFn: () => fetchApi<LeaderboardEntry[]>(`/leaderboard?sort=${sort.value}&limit=${limit}`),
+  })
+}
+
+// ---------------------------------------------------------------------------
 // Clipper Profile
 // ---------------------------------------------------------------------------
 

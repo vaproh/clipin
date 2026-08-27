@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { useRoute } from '#app'
-import { LayoutDashboard, Megaphone, Video, Wallet, CreditCard, Settings, Shield } from 'lucide-vue-next'
+import { LayoutDashboard, Megaphone, Video, Wallet, Trophy, CreditCard, Settings, Shield } from 'lucide-vue-next'
 
 const emit = defineEmits<{ navigate: [] }>()
 
@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
   { name: 'Campaigns', path: '/app/campaigns', icon: Megaphone },
   { name: 'Submissions', path: '/app/submissions', icon: Video, badge: 'SOON' },
   { name: 'Earnings', path: '/app/earnings', icon: Wallet, badge: 'SOON' },
+  { name: 'Leaderboard', path: '/app/leaderboard', icon: Trophy },
   { name: 'Payouts', path: '/app/payouts', icon: CreditCard, badge: 'SOON' },
   { name: 'Settings', path: '/app/settings', icon: Settings },
 ]

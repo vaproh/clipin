@@ -6,6 +6,7 @@ import ForClippers from '~/components/landing/ForClippers.vue'
 import ForCampaignOwners from '~/components/landing/ForCampaignOwners.vue'
 import WhyClipin from '~/components/landing/WhyClipin.vue'
 import Faq from '~/components/landing/Faq.vue'
+import LeaderboardPreview from '~/components/landing/LeaderboardPreview.vue'
 import FinalCta from '~/components/landing/FinalCta.vue'
 import Footer from '~/components/landing/Footer.vue'
 
@@ -33,6 +34,7 @@ useSeoMeta({
       <ForCampaignOwners />
       <WhyClipin />
       <Faq />
+      <LeaderboardPreview />
       <FinalCta />
     </main>
     <Footer />

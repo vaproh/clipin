@@ -56,7 +56,8 @@ const displayedSubmissionIds = computed(() => campaignSubmissions.value.slice(0,
 const { data: verificationAggregate } = useAggregateVerification(displayedSubmissionIds)
 
 // Reject dialog state
-const rejectTarget = ref<string | null>(null)
+const showRejectDialog = ref(false)
+const rejectTargetId = ref<string | null>(null)
 const rejectReason = ref('')
 const { mutate: approveSubmission, isPending: approving } = useApproveSubmission(id)
 const { mutate: rejectSubmission, isPending: rejecting } = useRejectSubmission(id)
@@ -66,20 +67,17 @@ function handleApprove(submissionId: string) {
 }
 
 function handleRejectRequest(submissionId: string) {
-  rejectTarget.value = submissionId
+  rejectTargetId.value = submissionId
   rejectReason.value = ''
+  showRejectDialog.value = true
 }
 
 function confirmReject() {
-  if (!rejectTarget.value) return
+  if (!rejectTargetId.value) return
   rejectSubmission(
-    { submissionId: rejectTarget.value, reason: rejectReason.value || undefined },
-    { onSuccess: () => { rejectTarget.value = null; rejectReason.value = '' } }
+    { submissionId: rejectTargetId.value, reason: rejectReason.value || undefined },
+    { onSuccess: () => { showRejectDialog.value = false; rejectTargetId.value = null; rejectReason.value = '' } }
   )
-}
-
-function onDialogChange(open: boolean) {
-  if (!open) rejectTarget.value = null
 }
 
 function formatDate(dateStr: string | null): string {
@@ -357,27 +355,7 @@ function relativeDate(dateStr: string | null): string {
       </template>
 
       <!-- Reject dialog -->
-      <UiDialog :open="!!rejectTarget" @update:open="onDialogChange">
-        <UiDialogContent class="sm:max-w-md">
-          <UiDialogHeader>
-            <UiDialogTitle>Reject Submission</UiDialogTitle>
-            <UiDialogDescription>Optionally provide a reason for the clipper.</UiDialogDescription>
-          </UiDialogHeader>
-          <textarea
-            v-model="rejectReason"
-            rows="3"
-            placeholder="Reason for rejection (optional)"
-            class="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm text-white placeholder:text-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-700 resize-none"
-          />
-          <UiDialogFooter>
-            <UiButton variant="ghost" size="sm" @click="rejectTarget.value = null">Cancel</UiButton>
-            <UiButton size="sm" class="gap-1.5" :disabled="rejecting" @click="confirmReject">
-              <XCircle class="w-3.5 h-3.5" />
-              {{ rejecting ? 'Rejecting...' : 'Reject' }}
-            </UiButton>
-          </UiDialogFooter>
-        </UiDialogContent>
-      </UiDialog>
+      <SubmissionRejectDialog v-model="showRejectDialog" v-model:reason="rejectReason" @confirm="confirmReject" />
     </template>
   </div>
 </template>

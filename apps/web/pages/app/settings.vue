@@ -18,7 +18,7 @@ const role = computed(() => profile.value?.role)
   <div class="space-y-5">
     <SharedPageHeader title="Settings" description="Profile & account preferences" />
 
-    <div class="rounded bg-neutral-950 border border-neutral-800 space-y-4 p-5">
+    <div class="rounded bg-neutral-950 border border-neutral-800 space-y-4 p-4">
       <div class="flex items-center justify-between">
         <span class="text-xs font-mono uppercase tracking-wider text-neutral-400">Account Profile</span>
         <UiButton v-if="!isLoading" variant="ghost" size="xs" class="gap-1" @click="refetch()">

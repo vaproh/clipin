@@ -53,7 +53,7 @@ function choose(role: UserRole) {
       </p>
     </div>
 
-    <div v-if="isError" class="rounded border border-neutral-700 bg-neutral-950 p-4 flex items-start gap-3">
+    <div v-if="isError" class="rounded border border-neutral-800 bg-neutral-950 p-4 flex items-start gap-3">
       <AlertTriangle class="w-4 h-4 text-neutral-400 mt-0.5 shrink-0" />
       <div class="flex-1 space-y-1">
         <div class="text-xs font-medium text-white">Couldn't save your role</div>

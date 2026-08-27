@@ -7,7 +7,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
-const { data, isLoading } = useMySubmissions()
+const { data, isLoading, isError } = useMySubmissions()
 
 const submissions = computed<Submission[]>(() => data.value?.submissions ?? [])
 
@@ -30,6 +30,11 @@ const stats = computed(() => ({
 
     <!-- Loading -->
     <SharedLoadingSpinner v-if="isLoading" />
+
+    <!-- Error -->
+    <div v-else-if="isError" class="rounded bg-neutral-950 border border-neutral-800 p-8 text-center">
+      <p class="text-sm text-red-400 font-mono">Failed to load. Please try again.</p>
+    </div>
 
     <!-- Empty state -->
     <SharedEmptyState

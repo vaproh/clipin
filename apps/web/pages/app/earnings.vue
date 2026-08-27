@@ -7,7 +7,7 @@ definePageMeta({
   middleware: 'auth',
 })
 
-const { data: earnings, isLoading } = useMyEarnings()
+const { data: earnings, isLoading, isError } = useMyEarnings()
 const { data: payoutsRes } = useMyPayouts()
 
 const pendingPayoutTotal = computed(() =>
@@ -37,6 +37,10 @@ const totalSubmissions = computed(() => {
     <SharedPageHeader title="Earnings" description="Verified view calculations and earned income" />
 
     <SharedLoadingSpinner v-if="isLoading" />
+
+    <div v-else-if="isError" class="rounded bg-neutral-950 border border-neutral-800 p-8 text-center">
+      <p class="text-sm text-red-400 font-mono">Failed to load. Please try again.</p>
+    </div>
 
     <template v-else-if="hasEarnings && earnings">
       <!-- Stats row -->

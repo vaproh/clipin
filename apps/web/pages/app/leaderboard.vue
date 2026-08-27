@@ -8,7 +8,7 @@ definePageMeta({
 })
 
 const sort = ref('earnings')
-const { data: entries, isLoading } = useLeaderboard(sort, 20)
+const { data: entries, isLoading, isError } = useLeaderboard(sort, 20)
 
 const topThree = computed(() => (entries.value ?? []).filter((e) => e.rank <= 3))
 const rest = computed(() => (entries.value ?? []).filter((e) => e.rank > 3))
@@ -23,6 +23,10 @@ const hasData = computed(() => (entries.value?.length ?? 0) > 0)
     <template v-if="isLoading">
       <SharedLoadingSpinner />
     </template>
+
+    <div v-else-if="isError" class="rounded bg-neutral-950 border border-neutral-800 p-8 text-center">
+      <p class="text-sm text-red-400 font-mono">Failed to load. Please try again.</p>
+    </div>
 
     <template v-else-if="hasData">
       <!-- Sort toggle -->

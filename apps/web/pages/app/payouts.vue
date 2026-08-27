@@ -9,7 +9,7 @@ definePageMeta({
 
 const { data: user } = useUserQuery()
 const { data: earnings } = useMyEarnings()
-const { data: payoutsRes, isLoading: payoutsLoading } = useMyPayouts()
+const { data: payoutsRes, isLoading: payoutsLoading, isError: payoutsError } = useMyPayouts()
 const updateUPI = useUpdateUPI()
 const requestPayout = useRequestPayout()
 
@@ -91,10 +91,10 @@ function formatTime(iso: string) {
     <SharedPageHeader title="Payouts" description="Request payouts and view transfer history" />
 
     <!-- Feedback -->
-    <div v-if="successMsg" class="rounded border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm text-white">
+    <div v-if="successMsg" class="rounded border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-white">
       {{ successMsg }}
     </div>
-    <div v-if="errorMsg" class="rounded border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-neutral-400">
+    <div v-if="errorMsg" class="rounded border border-neutral-800 bg-neutral-950 px-4 py-3 text-sm text-neutral-400">
       {{ errorMsg }}
     </div>
 
@@ -196,6 +196,10 @@ function formatTime(iso: string) {
       <h3 class="text-sm font-semibold text-white">Payout history</h3>
 
       <SharedLoadingSpinner v-if="payoutsLoading" />
+
+      <div v-else-if="payoutsError" class="rounded bg-neutral-950 border border-neutral-800 p-8 text-center">
+        <p class="text-sm text-red-400 font-mono">Failed to load. Please try again.</p>
+      </div>
 
       <template v-else-if="payouts.length > 0">
         <div class="rounded bg-neutral-950 border border-neutral-800 divide-y divide-neutral-800">

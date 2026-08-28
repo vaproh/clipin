@@ -817,6 +817,7 @@ export interface ClipperProfile {
     campaigns_participated: number
   }
   social_accounts: Array<{ platform: string; platform_username: string | null }>
+  tier: TierInfo | null
 }
 
 /** Fetch a public clipper profile by ID. */
@@ -827,6 +828,52 @@ export function useClipperProfile(id: Ref<string>) {
     queryKey: ['clipper', id],
     queryFn: () => fetchApi<ClipperProfile>(`/clippers/${id.value}`),
     enabled: () => !!id.value,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Reputation
+// ---------------------------------------------------------------------------
+
+export interface TierInfo {
+  name: string
+  label: string
+  min_earnings: number
+  next_tier: string | null
+  next_min_earnings: number | null
+}
+
+export interface ClipperReputation {
+  user_id: string
+  tier: TierInfo
+  total_earnings: number
+  total_submissions: number
+  campaigns_participated: number
+  member_since: string
+}
+
+/** Fetch the authenticated user's reputation. */
+export function useMyReputation() {
+  const { fetchApi } = useApi()
+  const { userId } = useAuth()
+
+  return useQuery({
+    queryKey: ['reputation', 'me'],
+    queryFn: () => fetchApi<ClipperReputation>('/me/reputation'),
+    enabled: () => !!userId.value,
+    staleTime: 60_000,
+  })
+}
+
+/** Fetch a public clipper's reputation by ID. */
+export function useClipperReputation(id: Ref<string>) {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['reputation', id],
+    queryFn: () => fetchApi<ClipperReputation>(`/clippers/${id.value}/reputation`),
+    enabled: () => !!id.value,
+    staleTime: 60_000,
   })
 }
 

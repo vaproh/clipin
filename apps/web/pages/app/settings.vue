@@ -8,6 +8,7 @@ definePageMeta({
 
 const { user } = useUser()
 const { data: profile, isLoading, refetch } = useUserQuery()
+const { data: reputation } = useMyReputation()
 
 const displayName = computed(() => profile.value?.display_name || user.value?.fullName || user.value?.firstName || 'Not provided')
 const email = computed(() => profile.value?.email || user.value?.primaryEmailAddress?.emailAddress || '—')
@@ -40,6 +41,13 @@ const role = computed(() => profile.value?.role)
           <span class="text-neutral-400">Role</span>
           <SharedStatusBadge v-if="role" :status="role" />
           <span v-else class="text-neutral-500">{{ isLoading ? 'Loading…' : 'Not set' }}</span>
+        </div>
+        <div v-if="reputation" class="flex items-center justify-between py-2 border-b border-neutral-900">
+          <span class="text-neutral-400">Tier</span>
+          <div class="flex items-center gap-2">
+            <SharedTierBadge :tier="reputation.tier.name" />
+            <span class="text-[11px] font-mono text-neutral-500">{{ reputation.tier.label }}</span>
+          </div>
         </div>
         <div class="flex items-center justify-between min-w-0 py-2">
           <span class="text-neutral-400">Auth Identity</span>

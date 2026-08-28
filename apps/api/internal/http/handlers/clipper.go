@@ -28,6 +28,14 @@ type socialAccountPublic struct {
 	Username *string `json:"username,omitempty"`
 }
 
+type tierInfoOutput struct {
+	Name            string  `json:"name"`
+	Label           string  `json:"label"`
+	MinEarnings     int64   `json:"min_earnings"`
+	NextTier        *string `json:"next_tier,omitempty"`
+	NextMinEarnings *int64  `json:"next_min_earnings,omitempty"`
+}
+
 type clipperProfileOutput struct {
 	Body struct {
 		ID                   string               `json:"id"`
@@ -43,6 +51,7 @@ type clipperProfileOutput struct {
 		TotalEarnings        int32                `json:"total_earnings"`
 		CampaignsParticipated int32               `json:"campaigns_participated"`
 		SocialAccounts       []socialAccountPublic `json:"social_accounts"`
+		Tier                 *tierInfoOutput      `json:"tier,omitempty"`
 	}
 }
 
@@ -129,6 +138,16 @@ func RegisterClipperHandlers(api huma.API, store ClipperStore, cache *service.Cl
 				item.Username = &sa.PlatformUsername.String
 			}
 			resp.Body.SocialAccounts = append(resp.Body.SocialAccounts, item)
+		}
+
+		// Compute tier from total earnings.
+		tier := service.ComputeTier(int64(totalEarnings))
+		resp.Body.Tier = &tierInfoOutput{
+			Name:            tier.Name,
+			Label:           tier.Label,
+			MinEarnings:     tier.MinEarnings,
+			NextTier:        tier.NextTier,
+			NextMinEarnings: tier.NextMin,
 		}
 
 		// Best-effort cache write.

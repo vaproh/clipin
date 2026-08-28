@@ -32,6 +32,7 @@ const totalSpent = computed(() => {
 
 // Clipper data
 const { data: earnings } = useMyEarnings()
+const { data: reputation } = useMyReputation()
 </script>
 
 <template>
@@ -168,6 +169,10 @@ const { data: earnings } = useMyEarnings()
 
     <!-- Clipper Dashboard -->
     <template v-else-if="isClipper">
+      <div v-if="reputation" class="rounded bg-neutral-950 border border-neutral-800 p-4 flex items-center gap-3">
+        <SharedTierBadge :tier="reputation.tier.name" />
+        <span class="text-xs font-mono text-neutral-400">{{ reputation.tier.label }}</span>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <SharedStatCard label="Role" value="Clipper" :icon="Scissors" />
         <SharedStatCard

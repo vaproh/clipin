@@ -65,10 +65,13 @@ const platformIcons: Record<string, typeof Youtube> = {
           <span class="text-sm font-mono font-medium text-neutral-400">{{ initials(profile.display_name) }}</span>
         </div>
         <div class="space-y-1 min-w-0">
-          <SharedPageHeader
-            :title="profile.display_name || 'Clipper'"
-            :description="`Joined ${formatDate(profile.created_at)}`"
-          />
+          <div class="flex items-center gap-2">
+            <SharedPageHeader
+              :title="profile.display_name || 'Clipper'"
+              :description="`Joined ${formatDate(profile.created_at)}`"
+            />
+            <SharedTierBadge v-if="profile.tier" :tier="profile.tier.name" />
+          </div>
           <p v-if="profile.bio" class="text-sm text-neutral-400 leading-relaxed max-w-xl">{{ profile.bio }}</p>
         </div>
       </div>

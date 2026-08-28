@@ -21,7 +21,7 @@ import { ArrowRight } from 'lucide-vue-next'
 
       <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
         <NuxtLink
-          to="/sign-up"
+          to="/sign-up?role=clipper"
           class="h-10 px-5 inline-flex items-center justify-center rounded bg-white text-black text-xs font-medium hover:bg-neutral-200 transition-colors gap-2"
         >
           Join as a clipper
@@ -29,7 +29,7 @@ import { ArrowRight } from 'lucide-vue-next'
         </NuxtLink>
 
         <NuxtLink
-          to="/sign-up"
+          to="/sign-up?role=owner"
           class="h-10 px-5 inline-flex items-center justify-center rounded bg-neutral-900 text-neutral-200 border border-neutral-800 text-xs font-medium hover:bg-neutral-800 transition-colors"
         >
           I'm a campaign owner

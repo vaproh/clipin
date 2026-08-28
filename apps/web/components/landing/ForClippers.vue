@@ -45,7 +45,7 @@ const clipperPoints = [
 
         <div class="pt-2">
           <NuxtLink
-            to="/sign-up"
+            to="/sign-up?role=clipper"
             class="h-10 px-5 inline-flex items-center justify-center rounded bg-white text-black text-xs font-medium hover:bg-neutral-200 transition-colors gap-2"
           >
             Start clipping now

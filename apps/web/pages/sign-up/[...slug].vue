@@ -10,6 +10,13 @@ useSeoMeta({
   description: 'Create your ClipIN account. Join India\'s performance clipping marketplace and start earning from verified views.',
   robots: 'noindex, nofollow',
 })
+
+// Store role intent from URL query param for onboarding
+const route = useRoute()
+const roleIntent = route.query.role as string | undefined
+if (roleIntent && ['clipper', 'owner'].includes(roleIntent)) {
+  localStorage.setItem('clipin_role_intent', roleIntent)
+}
 </script>
 
 <template>

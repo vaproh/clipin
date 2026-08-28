@@ -28,6 +28,15 @@ const roles: { value: UserRole; title: string; description: string; icon: typeof
 
 const selected = ref<UserRole | null>(null)
 
+// Auto-select role from landing page intent
+onMounted(() => {
+  const intent = localStorage.getItem('clipin_role_intent') as UserRole | null
+  localStorage.removeItem('clipin_role_intent')
+  if (intent && ['clipper', 'owner'].includes(intent) && !isPending.value) {
+    choose(intent)
+  }
+})
+
 function choose(role: UserRole) {
   selected.value = role
   setRole(role, {

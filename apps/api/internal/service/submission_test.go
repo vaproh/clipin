@@ -652,6 +652,95 @@ func TestListByClipper(t *testing.T) {
 	}
 }
 
+func TestAutoApprove_SendsNotification(t *testing.T) {
+	now := time.Now()
+	cutoff := now.Add(-49 * time.Hour) // past 48h auto-approve
+
+	rows := []sqlc.ListPendingSubmissionsOlderThanRow{
+		{
+			ID:               pgtype.UUID{Bytes: [16]byte{10}, Valid: true},
+			CampaignID:       testCampaignID,
+			ClipperID:        "clipper1",
+			PostUrl:          "https://youtube.com/watch?v=1",
+			Status:           "pending",
+			CreatedAt:        pgtype.Timestamptz{Valid: true, Time: cutoff},
+			AutoApproveHours: pgtype.Int4{Valid: true, Int32: 48},
+		},
+	}
+
+	var notifClipper string
+	var notifTitle string
+	store := &mockSubmissionStore{
+		listPending: func(_ context.Context, _ pgtype.Timestamptz) ([]sqlc.ListPendingSubmissionsOlderThanRow, error) {
+			return rows, nil
+		},
+		autoApproveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 1, nil
+		},
+		getCampaignByID: func(_ context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return sqlc.Campaign{ID: id, Title: "Test Campaign"}, nil
+		},
+	}
+	svc := service.NewNotificationService(&notifStore{
+		create: func(_ context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			notifClipper = arg.UserID
+			notifTitle = arg.Body.String
+			return sqlc.Notification{}, nil
+		},
+	})
+	subSvc := service.NewSubmissionService(store)
+	subSvc.WithNotifications(svc)
+
+	count, err := subSvc.AutoApprove(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 auto-approved, got %d", count)
+	}
+	if notifClipper != "clipper1" {
+		t.Errorf("expected clipper1, got %s", notifClipper)
+	}
+	if notifTitle != "Your clip for 'Test Campaign' was auto-approved" {
+		t.Errorf("unexpected notification body: %q", notifTitle)
+	}
+}
+
+func TestAutoApprove_NoNotificationsWhenNil(t *testing.T) {
+	now := time.Now()
+	cutoff := now.Add(-49 * time.Hour)
+
+	rows := []sqlc.ListPendingSubmissionsOlderThanRow{
+		{
+			ID:               pgtype.UUID{Bytes: [16]byte{10}, Valid: true},
+			CampaignID:       testCampaignID,
+			ClipperID:        "clipper1",
+			PostUrl:          "https://youtube.com/watch?v=1",
+			Status:           "pending",
+			CreatedAt:        pgtype.Timestamptz{Valid: true, Time: cutoff},
+			AutoApproveHours: pgtype.Int4{Valid: true, Int32: 48},
+		},
+	}
+
+	store := &mockSubmissionStore{
+		listPending: func(_ context.Context, _ pgtype.Timestamptz) ([]sqlc.ListPendingSubmissionsOlderThanRow, error) {
+			return rows, nil
+		},
+		autoApproveSubmission: func(_ context.Context, id pgtype.UUID) (int64, error) {
+			return 1, nil
+		},
+	}
+	svc := service.NewSubmissionService(store)
+	// No WithNotifications; should not panic.
+	count, err := svc.AutoApprove(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1, got %d", count)
+	}
+}
+
 func TestValidatePostURL_RejectsFileScheme(t *testing.T) {
 	err := service.ValidatePostURL("file:///etc/passwd")
 	if err != service.ErrInvalidURL {

@@ -147,14 +147,14 @@ var regularUser = &sqlc.User{ID: "user_1", Email: "user@test.com", Role: "clippe
 func adminRouter(userStore handlers.AdminUserStore, auditSvc handlers.AuditServiceInterface, fraudSvc handlers.FraudServiceInterface, user *sqlc.User) http.Handler {
 	r := chi.NewRouter()
 	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
-	handlers.RegisterAdminHandlers(api, userStore, auditSvc, fraudSvc)
+	handlers.RegisterAdminHandlers(api, userStore, auditSvc, fraudSvc, nil)
 	return withUser(user)(r)
 }
 
 func adminRouterNoAuth(userStore handlers.AdminUserStore, auditSvc handlers.AuditServiceInterface, fraudSvc handlers.FraudServiceInterface) http.Handler {
 	r := chi.NewRouter()
 	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
-	handlers.RegisterAdminHandlers(api, userStore, auditSvc, fraudSvc)
+	handlers.RegisterAdminHandlers(api, userStore, auditSvc, fraudSvc, nil)
 	return r
 }
 
@@ -376,6 +376,54 @@ func TestAdminOverrideCampaign_HappyPath(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
 	}
+}
+
+func TestAdminOverrideCampaign_SendsNotification(t *testing.T) {
+	store := &fakeAdminUserStore{
+		getCampaign: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return sqlc.Campaign{ID: id, Status: "active", OwnerID: "owner_1", Title: "Test Campaign", CpmRate: 100, TotalBudget: 5000, RemainingBudget: 5000, PlatformFee: 500}, nil
+		},
+		updateStatus: func(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{ID: arg.ID, Status: arg.Status, CpmRate: 100, TotalBudget: 5000, RemainingBudget: 5000, PlatformFee: 500, CreatedAt: pgtype.Timestamptz{Valid: true}, UpdatedAt: pgtype.Timestamptz{Valid: true}}, nil
+		},
+	}
+
+	var notifOwner string
+	var notifMsg string
+	notif := &fakeAdminNotifSvc{
+		campaignUpdate: func(ctx context.Context, ownerID, campaignTitle, message string) error {
+			notifOwner = ownerID
+			notifMsg = message
+			return nil
+		},
+	}
+	r := chi.NewRouter()
+	api := humachi.New(r, huma.DefaultConfig("ClipIN API", "1.0.0"))
+	handlers.RegisterAdminHandlers(api, store, &fakeAuditSvc{}, &fakeFraudSvc{}, notif)
+	router := withUser(adminUser1)(r)
+
+	body := `{"status":"paused"}`
+	rec := doRequestJSON(t, router, http.MethodPost, "/admin/campaigns/0102030405060708090a0b0c0d0e0f10/override", body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if notifOwner != "owner_1" {
+		t.Errorf("expected owner_1, got %s", notifOwner)
+	}
+	if notifMsg != "was set to 'paused' by an admin" {
+		t.Errorf("unexpected notification message: %q", notifMsg)
+	}
+}
+
+type fakeAdminNotifSvc struct {
+	campaignUpdate func(ctx context.Context, ownerID, campaignTitle, message string) error
+}
+
+func (f *fakeAdminNotifSvc) NotifyCampaignUpdate(ctx context.Context, ownerID, campaignTitle, message string) error {
+	if f.campaignUpdate != nil {
+		return f.campaignUpdate(ctx, ownerID, campaignTitle, message)
+	}
+	return nil
 }
 
 func TestAdminListUsers_DefaultPagination(t *testing.T) {

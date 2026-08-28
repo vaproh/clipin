@@ -27,6 +27,11 @@ type FraudServiceInterface interface {
 	GetUserFlagCount(ctx context.Context, userID string) (int, error)
 }
 
+// AdminNotificationServiceInterface is the subset of NotificationService the admin handlers need.
+type AdminNotificationServiceInterface interface {
+	NotifyCampaignUpdate(ctx context.Context, ownerID, campaignTitle, message string) error
+}
+
 // AdminUserStore is the subset of the user persistence layer admin endpoints need.
 type AdminUserStore interface {
 	GetUserByID(ctx context.Context, id string) (sqlc.User, error)
@@ -241,6 +246,7 @@ func RegisterAdminHandlers(
 	userStore AdminUserStore,
 	auditSvc AuditServiceInterface,
 	fraudSvc FraudServiceInterface,
+	notifSvc AdminNotificationServiceInterface,
 ) {
 	// GET /admin/users - list users
 	huma.Register(api, huma.Operation{
@@ -549,6 +555,16 @@ func RegisterAdminHandlers(
 		if auditSvc != nil {
 			_ = auditSvc.Log(ctx, admin.ID, "admin.campaign.override", "campaign",
 				fmt.Sprintf("%x", campaignID.Bytes), details, "")
+		}
+
+		// Best-effort notification to campaign owner.
+		if notifSvc != nil {
+			title := campaign.Title
+			if title == "" {
+				title = "your campaign"
+			}
+			_ = notifSvc.NotifyCampaignUpdate(ctx, campaign.OwnerID, title,
+				fmt.Sprintf("was set to '%s' by an admin", input.Body.Status))
 		}
 
 		resp := &campaignOverrideOutput{}

@@ -202,3 +202,29 @@ func (s *NotificationService) NotifyCampaignUpdate(ctx context.Context, ownerID,
 	}
 	return nil
 }
+
+// NotifyAutoApproved sends a notification when a submission is auto-approved.
+func (s *NotificationService) NotifyAutoApproved(ctx context.Context, clipperID, campaignTitle string) error {
+	_, err := s.Create(ctx, clipperID, "submission_approved",
+		"Submission Auto-Approved",
+		fmt.Sprintf("Your clip for '%s' was auto-approved", campaignTitle),
+		"",
+	)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("notify auto-approved: %w", err)
+	}
+	return nil
+}
+
+// NotifyEarningsChanged sends a notification when a clip's eligible views/earnings change.
+func (s *NotificationService) NotifyEarningsChanged(ctx context.Context, clipperID, campaignTitle string, eligibleViews int64) error {
+	_, err := s.Create(ctx, clipperID, "system",
+		"Earnings Updated",
+		fmt.Sprintf("Your clip for '%s' now has %d eligible views", campaignTitle, eligibleViews),
+		"",
+	)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("notify earnings changed: %w", err)
+	}
+	return nil
+}

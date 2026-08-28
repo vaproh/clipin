@@ -28,12 +28,18 @@ type VerificationStore interface {
 
 // VerificationService implements snapshot ingestion and delta computation.
 type VerificationService struct {
-	store VerificationStore
+	store         VerificationStore
+	notifications *NotificationService
 }
 
 // NewVerificationService creates a new VerificationService.
 func NewVerificationService(store VerificationStore) *VerificationService {
 	return &VerificationService{store: store}
+}
+
+// WithNotifications attaches a notification service for sending in-app notifications.
+func (s *VerificationService) WithNotifications(notifications *NotificationService) {
+	s.notifications = notifications
 }
 
 // RecordSnapshot stores a new metric snapshot for a submission.
@@ -55,6 +61,22 @@ func (s *VerificationService) RecordSnapshot(ctx context.Context, submissionID p
 	if err != nil {
 		return nil, fmt.Errorf("create metric snapshot: %w", err)
 	}
+
+	// Best-effort: compute eligible views and notify clipper if earnings changed.
+	if s.notifications != nil {
+		if eligible, err := s.ComputeEligibleViews(ctx, submissionID); err == nil && eligible.EligibleViews > 0 {
+			sub, err := s.store.GetSubmissionByID(ctx, submissionID)
+			if err == nil {
+				campaign, err := s.store.GetCampaignByID(ctx, sub.CampaignID)
+				title := "your clip"
+				if err == nil && campaign.Title != "" {
+					title = campaign.Title
+				}
+				_ = s.notifications.NotifyEarningsChanged(ctx, sub.ClipperID, title, eligible.EligibleViews)
+			}
+		}
+	}
+
 	return &snap, nil
 }
 

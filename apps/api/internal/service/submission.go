@@ -364,6 +364,14 @@ func (s *SubmissionService) AutoApprove(ctx context.Context) (int, error) {
 			// rowsAffected == 0 means another path already handled it; skip silently.
 			if rowsAffected > 0 {
 				count++
+				// Best-effort notification to the clipper.
+				if s.notifications != nil {
+					title := "your campaign"
+					if c, err := s.store.GetCampaignByID(ctx, row.CampaignID); err == nil && c.Title != "" {
+						title = c.Title
+					}
+					_ = s.notifications.NotifyAutoApproved(ctx, row.ClipperID, title)
+				}
 			}
 		}
 	}

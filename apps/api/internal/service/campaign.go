@@ -240,6 +240,11 @@ func (s *CampaignService) Create(ctx context.Context, ownerID string, in *Create
 		}
 	}
 
+	// Best-effort notification to the owner.
+	if s.notifications != nil {
+		_ = s.notifications.NotifyCampaignUpdate(ctx, ownerID, campaign.Title, "has been created")
+	}
+
 	return &campaign, nil
 }
 
@@ -351,6 +356,12 @@ func (s *CampaignService) Cancel(ctx context.Context, ownerID string, campaignID
 	if err != nil {
 		return nil, fmt.Errorf("cancel campaign: %w", err)
 	}
+
+	// Best-effort notification to the owner.
+	if s.notifications != nil {
+		_ = s.notifications.NotifyCampaignUpdate(ctx, ownerID, campaign.Title, "has been cancelled. Remaining budget refunded.")
+	}
+
 	return &updated, nil
 }
 
@@ -376,6 +387,12 @@ func (s *CampaignService) transition(ctx context.Context, ownerID string, campai
 	if err != nil {
 		return nil, fmt.Errorf("%s campaign: %w", to, err)
 	}
+
+	// Best-effort notification to the owner.
+	if s.notifications != nil {
+		_ = s.notifications.NotifyCampaignUpdate(ctx, ownerID, campaign.Title, fmt.Sprintf("has been %s", to))
+	}
+
 	return &updated, nil
 }
 

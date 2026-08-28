@@ -542,3 +542,214 @@ func TestListPublic_SearchPartialMatch(t *testing.T) {
 		t.Errorf("expected total 3, got %d", result.Total)
 	}
 }
+
+// --- Notification wiring tests ---
+
+func TestCreate_SendsNotification(t *testing.T) {
+	store := &mockCampaignStore{
+		createCampaign: func(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{
+				ID:              arg.ID,
+				OwnerID:         arg.OwnerID,
+				Title:           arg.Title,
+				Status:          "active",
+				CpmRate:         arg.CpmRate,
+				TotalBudget:     arg.TotalBudget,
+				RemainingBudget: arg.TotalBudget,
+				PlatformFee:     arg.PlatformFee,
+			}, nil
+		},
+	}
+
+	var notifCalled bool
+	var notifOwner string
+	var notifMsg string
+	svc := service.NewCampaignService(store, nil)
+	svc.WithNotifications(service.NewNotificationService(&notifStore{
+		create: func(ctx context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			notifCalled = true
+			notifOwner = arg.UserID
+			notifMsg = arg.Body.String
+			return sqlc.Notification{}, nil
+		},
+	}))
+
+	title := "New Campaign"
+	budget := int32(10000)
+	cpm := int32(100)
+	_, err := svc.Create(context.Background(), "owner1", &service.CreateCampaignInput{
+		Title:       title,
+		Platform:    "youtube",
+		CpmRate:     cpm,
+		TotalBudget: budget,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !notifCalled {
+		t.Error("expected notification to be sent on campaign create")
+	}
+	if notifOwner != "owner1" {
+		t.Errorf("expected owner1, got %s", notifOwner)
+	}
+	if notifMsg != "Campaign 'New Campaign': has been created" {
+		t.Errorf("unexpected notification body: %q", notifMsg)
+	}
+}
+
+func TestCreate_NoNotificationsWhenNil(t *testing.T) {
+	store := &mockCampaignStore{
+		createCampaign: func(ctx context.Context, arg sqlc.CreateCampaignParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{
+				ID:              arg.ID,
+				OwnerID:         arg.OwnerID,
+				Title:           arg.Title,
+				Status:          "active",
+				CpmRate:         arg.CpmRate,
+				TotalBudget:     arg.TotalBudget,
+				RemainingBudget: arg.TotalBudget,
+				PlatformFee:     arg.PlatformFee,
+			}, nil
+		},
+	}
+	svc := service.NewCampaignService(store, nil)
+	// No WithNotifications call; should not panic.
+	title := "Test"
+	budget := int32(10000)
+	cpm := int32(100)
+	_, err := svc.Create(context.Background(), "owner1", &service.CreateCampaignInput{
+		Title:       title,
+		Platform:    "youtube",
+		CpmRate:     cpm,
+		TotalBudget: budget,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func testCampaignForNotifs(id string, ownerID string, title string, status string, budget int32) sqlc.Campaign {
+	return sqlc.Campaign{
+		ID:              pgtype.UUID{Bytes: [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, Valid: true},
+		OwnerID:         ownerID,
+		Title:           title,
+		Platform:        "youtube",
+		Status:          status,
+		CpmRate:         100,
+		TotalBudget:     budget,
+		RemainingBudget: budget / 2,
+		PlatformFee:     1000,
+		CreatedAt:       pgtype.Timestamptz{Valid: true},
+		UpdatedAt:       pgtype.Timestamptz{Valid: true},
+	}
+}
+
+func TestPause_SendsNotification(t *testing.T) {
+	c := testCampaignForNotifs("1", "owner1", "My Campaign", "active", 10000)
+	store := &mockCampaignStore{
+		getByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return c, nil
+		},
+		updateStatus: func(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{ID: arg.ID, Status: arg.Status, Title: c.Title}, nil
+		},
+	}
+
+	var notifBody string
+	svc := service.NewCampaignService(store, nil)
+	svc.WithNotifications(service.NewNotificationService(&notifStore{
+		create: func(ctx context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			notifBody = arg.Body.String
+			return sqlc.Notification{}, nil
+		},
+	}))
+
+	_, err := svc.Pause(context.Background(), "owner1", c.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if notifBody != "Campaign 'My Campaign': has been paused" {
+		t.Errorf("unexpected notification body: %q", notifBody)
+	}
+}
+
+func TestResume_SendsNotification(t *testing.T) {
+	c := testCampaignForNotifs("1", "owner1", "My Campaign", "paused", 10000)
+	store := &mockCampaignStore{
+		getByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return c, nil
+		},
+		updateStatus: func(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{ID: arg.ID, Status: arg.Status, Title: c.Title}, nil
+		},
+	}
+
+	var notifBody string
+	svc := service.NewCampaignService(store, nil)
+	svc.WithNotifications(service.NewNotificationService(&notifStore{
+		create: func(ctx context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			notifBody = arg.Body.String
+			return sqlc.Notification{}, nil
+		},
+	}))
+
+	_, err := svc.Resume(context.Background(), "owner1", c.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if notifBody != "Campaign 'My Campaign': has been active" {
+		t.Errorf("unexpected notification body: %q", notifBody)
+	}
+}
+
+func TestCancel_SendsNotification(t *testing.T) {
+	c := testCampaignForNotifs("1", "owner1", "My Campaign", "active", 10000)
+	store := &mockCampaignStore{
+		getByID: func(ctx context.Context, id pgtype.UUID) (sqlc.Campaign, error) {
+			return c, nil
+		},
+		updateStatus: func(ctx context.Context, arg sqlc.UpdateCampaignStatusParams) (sqlc.Campaign, error) {
+			return sqlc.Campaign{ID: arg.ID, Status: arg.Status, Title: c.Title}, nil
+		},
+	}
+
+	var notifBody string
+	svc := service.NewCampaignService(store, nil)
+	svc.WithNotifications(service.NewNotificationService(&notifStore{
+		create: func(ctx context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			notifBody = arg.Body.String
+			return sqlc.Notification{}, nil
+		},
+	}))
+
+	_, err := svc.Cancel(context.Background(), "owner1", c.ID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if notifBody != "Campaign 'My Campaign': has been cancelled. Remaining budget refunded." {
+		t.Errorf("unexpected notification body: %q", notifBody)
+	}
+}
+
+// notifStore is a minimal mock for NotificationStore used in campaign tests.
+type notifStore struct {
+	create func(ctx context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error)
+}
+
+func (n *notifStore) CreateNotification(ctx context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+	if n.create != nil {
+		return n.create(ctx, arg)
+	}
+	return sqlc.Notification{}, nil
+}
+func (n *notifStore) ListNotificationsByUser(_ context.Context, _ sqlc.ListNotificationsByUserParams) ([]sqlc.Notification, error) {
+	return nil, nil
+}
+func (n *notifStore) CountUnreadNotifications(_ context.Context, _ string) (int64, error) { return 0, nil }
+func (n *notifStore) MarkNotificationRead(_ context.Context, _ sqlc.MarkNotificationReadParams) error {
+	return nil
+}
+func (n *notifStore) MarkAllNotificationsRead(_ context.Context, _ string) error { return nil }
+func (n *notifStore) DeleteNotification(_ context.Context, _ sqlc.DeleteNotificationParams) error {
+	return nil
+}

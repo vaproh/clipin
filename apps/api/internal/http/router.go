@@ -106,6 +106,8 @@ func NewRouter(deps *AppDependencies) http.Handler {
 		if ledgerSvc := service.NewLedgerService(deps.DB.Queries); ledgerSvc != nil {
 			campaignSvc.WithLedger(ledgerSvc)
 		}
+		notifSvc := service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis)
+		campaignSvc.WithNotifications(notifSvc)
 	}
 	handlers.RegisterCampaignHandlers(api, campaignSvc)
 
@@ -130,6 +132,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	internalAPI := humachi.New(internal, intCfg)
 	if deps.DB != nil {
 		verificationSvc := service.NewVerificationService(deps.DB.Queries)
+		verificationSvc.WithNotifications(service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis))
 		handlers.RegisterInternalVerificationHandlers(internalAPI, verificationSvc)
 	}
 
@@ -187,10 +190,11 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		auditSvc := service.NewAuditService(deps.DB.Queries)
 		fraudSvc := service.NewFraudService(deps.DB.Queries)
+		notifSvc := service.NewNotificationServiceWithCache(deps.DB.Queries, deps.Redis)
 		adminGroup := authenticated.Group(nil)
 		adminGroup.Use(auth.AdminOnly)
 		adminAPI := humachi.New(adminGroup, authCfg)
-		handlers.RegisterAdminHandlers(adminAPI, deps.DB.Queries, auditSvc, fraudSvc)
+		handlers.RegisterAdminHandlers(adminAPI, deps.DB.Queries, auditSvc, fraudSvc, notifSvc)
 	}
 
 	// --- Notification handlers (authenticated) ---

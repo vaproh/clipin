@@ -303,3 +303,44 @@ func TestNotifyCampaignUpdate(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestNotifyAutoApproved(t *testing.T) {
+	store := &mockNotificationStore{
+		create: func(_ context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			if arg.Type != "submission_approved" {
+				t.Errorf("expected submission_approved, got %s", arg.Type)
+			}
+			if arg.UserID != "clipper1" {
+				t.Errorf("expected clipper1, got %s", arg.UserID)
+			}
+			if arg.Title != "Submission Auto-Approved" {
+				t.Errorf("expected 'Submission Auto-Approved', got %s", arg.Title)
+			}
+			return sqlc.Notification{}, nil
+		},
+	}
+	svc := service.NewNotificationService(store)
+	err := svc.NotifyAutoApproved(context.Background(), "clipper1", "Test Campaign")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNotifyEarningsChanged(t *testing.T) {
+	store := &mockNotificationStore{
+		create: func(_ context.Context, arg sqlc.CreateNotificationParams) (sqlc.Notification, error) {
+			if arg.Type != "system" {
+				t.Errorf("expected system, got %s", arg.Type)
+			}
+			if arg.UserID != "clipper1" {
+				t.Errorf("expected clipper1, got %s", arg.UserID)
+			}
+			return sqlc.Notification{}, nil
+		},
+	}
+	svc := service.NewNotificationService(store)
+	err := svc.NotifyEarningsChanged(context.Background(), "clipper1", "Test Campaign", 5000)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

@@ -19,9 +19,9 @@ function clearSearch() {
 
 // Platform select needs string, not undefined. Use '' for "all".
 const platformValue = computed({
-  get: () => filters.value.platform ?? '',
+  get: () => filters.value.platform ?? 'all',
   set: (v: string) => {
-    filters.value = { ...filters.value, platform: v || undefined, page: 1 }
+    filters.value = { ...filters.value, platform: v === 'all' ? undefined : v, page: 1 }
   },
 })
 
@@ -75,7 +75,7 @@ function clearFilters() {
           <UiSelectValue placeholder="All platforms" />
         </UiSelectTrigger>
         <UiSelectContent>
-          <UiSelectItem value="">All platforms</UiSelectItem>
+          <UiSelectItem value="all">All platforms</UiSelectItem>
           <UiSelectItem value="youtube">YouTube</UiSelectItem>
           <UiSelectItem value="instagram">Instagram</UiSelectItem>
           <UiSelectItem value="tiktok">TikTok</UiSelectItem>

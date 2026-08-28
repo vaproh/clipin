@@ -46,7 +46,12 @@ type Querier interface {
 	GetCampaignTemplateByID(ctx context.Context, id pgtype.UUID) (CampaignTemplate, error)
 	GetCampaignViewStats(ctx context.Context, campaignID pgtype.UUID) (GetCampaignViewStatsRow, error)
 	GetClipperCampaignCount(ctx context.Context, clipperID string) (int32, error)
+	GetClipperEarningsByCampaign(ctx context.Context, clipperID string) ([]GetClipperEarningsByCampaignRow, error)
+	// Clipper analytics queries
+	GetClipperEarningsByDay(ctx context.Context, arg GetClipperEarningsByDayParams) ([]GetClipperEarningsByDayRow, error)
+	GetClipperRecentSubmissions(ctx context.Context, arg GetClipperRecentSubmissionsParams) ([]GetClipperRecentSubmissionsRow, error)
 	GetClipperSubmissionStats(ctx context.Context, clipperID string) (GetClipperSubmissionStatsRow, error)
+	GetClipperTierStats(ctx context.Context, id string) (GetClipperTierStatsRow, error)
 	GetClipperTotalEarnings(ctx context.Context, clipperID pgtype.Text) (int32, error)
 	GetClipperTotalViews(ctx context.Context, clipperID string) (int64, error)
 	GetFraudFlagByID(ctx context.Context, id pgtype.UUID) (FraudFlag, error)

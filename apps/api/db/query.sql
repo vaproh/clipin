@@ -509,6 +509,65 @@ GROUP BY u.id, u.display_name, u.avatar_url
 ORDER BY total_earnings DESC
 LIMIT $1 OFFSET $2;
 
+-- Clipper analytics queries
+
+-- name: GetClipperEarningsByDay :many
+SELECT
+    DATE(created_at) as day,
+    SUM(amount)::int as total
+FROM ledger_entries
+WHERE clipper_id = $1 AND entry_type = 'earning'
+  AND created_at >= $2
+GROUP BY DATE(created_at)
+ORDER BY day ASC;
+
+-- name: GetClipperEarningsByCampaign :many
+SELECT
+    c.id as campaign_id,
+    c.title,
+    c.platform,
+    c.cpm_rate,
+    SUM(le.amount)::int as total_earnings,
+    COUNT(DISTINCT s.id)::int as total_submissions,
+    COUNT(DISTINCT s.id) FILTER (WHERE s.status IN ('approved', 'auto_approved'))::int as approved_submissions,
+    COALESCE(SUM(s2.views), 0)::bigint as total_views
+FROM ledger_entries le
+JOIN campaigns c ON le.campaign_id = c.id
+LEFT JOIN submissions s ON s.campaign_id = c.id AND s.clipper_id = $1
+LEFT JOIN (
+    SELECT ms.submission_id, ms.views
+    FROM metric_snapshots ms
+    JOIN submissions s3 ON ms.submission_id = s3.id
+    WHERE s3.clipper_id = $1
+    AND ms.id = (SELECT id FROM metric_snapshots WHERE submission_id = ms.submission_id ORDER BY captured_at DESC LIMIT 1)
+) s2 ON s2.submission_id = s.id
+WHERE le.clipper_id = $1 AND le.entry_type = 'earning'
+GROUP BY c.id, c.title, c.platform, c.cpm_rate
+ORDER BY total_earnings DESC;
+
+-- name: GetClipperRecentSubmissions :many
+SELECT
+    s.id, s.post_url, s.platform, s.status, s.created_at,
+    c.title as campaign_title,
+    c.cpm_rate,
+    COALESCE((SELECT ms.views FROM metric_snapshots ms WHERE ms.submission_id = s.id ORDER BY ms.captured_at DESC LIMIT 1), 0)::bigint as latest_views
+FROM submissions s
+JOIN campaigns c ON s.campaign_id = c.id
+WHERE s.clipper_id = $1
+ORDER BY s.created_at DESC
+LIMIT $2;
+
+-- name: GetClipperTierStats :one
+SELECT
+    COALESCE(SUM(CASE WHEN le.entry_type = 'earning' THEN le.amount ELSE 0 END), 0)::bigint as total_earnings,
+    COUNT(DISTINCT s.id)::int as total_submissions,
+    COUNT(DISTINCT s.campaign_id)::int as campaigns_participated
+FROM users u
+LEFT JOIN ledger_entries le ON le.clipper_id = u.id
+LEFT JOIN submissions s ON s.clipper_id = u.id
+WHERE u.id = $1
+GROUP BY u.id;
+
 -- name: GetLeaderboardBySubmissions :many
 SELECT
     u.id,

@@ -972,3 +972,61 @@ export function useAdminStats(enabled?: Ref<boolean>) {
     enabled: enabled ? () => enabled.value : true,
   })
 }
+
+// ---------------------------------------------------------------------------
+// Clipper Analytics
+// ---------------------------------------------------------------------------
+
+export interface EarningsByDay {
+  day: string
+  total: number
+}
+
+export interface EarningsByCampaign {
+  campaign_id: string
+  title: string
+  platform: string
+  cpm_rate: number
+  total_earnings: number
+  total_submissions: number
+  approved_submissions: number
+  total_views: number
+}
+
+export interface RecentSubmission {
+  id: string
+  post_url: string
+  platform: string
+  status: string
+  created_at: string
+  campaign_title: string
+  cpm_rate: number
+  latest_views: number
+}
+
+export interface ClipperAnalyticsSummary {
+  total_earnings: number
+  total_submissions: number
+  approved_submissions: number
+  total_views: number
+  approval_rate: number
+  avg_earnings_per_clip: number
+  campaigns_participated: number
+}
+
+export interface ClipperAnalytics {
+  earnings_by_day: EarningsByDay[]
+  earnings_by_campaign: EarningsByCampaign[]
+  recent_submissions: RecentSubmission[]
+  summary: ClipperAnalyticsSummary
+}
+
+/** Fetch clipper analytics dashboard data. */
+export function useMyAnalytics() {
+  const { fetchApi } = useApi()
+
+  return useQuery({
+    queryKey: ['analytics', 'me'],
+    queryFn: () => fetchApi<ClipperAnalytics>('/me/analytics'),
+  })
+}

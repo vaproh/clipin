@@ -112,7 +112,9 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	// Clipper public profile (public endpoints)
 	if deps.DB != nil {
 		clipperCache := service.NewClipperProfileCache(deps.Redis)
+		reputationSvc := service.NewReputationService(deps.DB.Queries)
 		handlers.RegisterClipperHandlers(api, deps.DB.Queries, clipperCache)
+		handlers.RegisterReputationHandlers(api, reputationSvc)
 	}
 
 	// Public leaderboard (no auth)
@@ -150,6 +152,7 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		analyticsCache := service.NewCampaignAnalyticsCache(deps.Redis)
 		handlers.RegisterCampaignAnalyticsHandlers(authenticatedAPI, deps.DB.Queries, analyticsCache)
+		handlers.RegisterClipperAnalyticsHandlers(authenticatedAPI, deps.DB.Queries)
 	}
 
 	if deps.DB != nil {
@@ -200,6 +203,12 @@ func NewRouter(deps *AppDependencies) http.Handler {
 	if deps.DB != nil {
 		socialAccountSvc := service.NewSocialAccountService(deps.DB.Queries)
 		handlers.RegisterSocialAccountHandlers(authenticatedAPI, socialAccountSvc)
+	}
+
+	// --- Reputation handlers (authenticated, /me/reputation) ---
+	if deps.DB != nil {
+		reputationSvc := service.NewReputationService(deps.DB.Queries)
+		handlers.RegisterReputationHandlers(authenticatedAPI, reputationSvc)
 	}
 
 	// --- Template handlers (public GET + admin POST) ---

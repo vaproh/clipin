@@ -18,9 +18,8 @@ const roleLabel = computed(() => {
 const isOwner = computed(() => profile.value?.role === 'owner')
 const isClipper = computed(() => profile.value?.role === 'clipper')
 
-// Owner data
-const { data: ownerStats, isLoading: statsLoading } = useOwnerStats()
-const { data: myCampaigns, isLoading: campaignsLoading } = useMyCampaigns()
+const { data: ownerStats, isLoading: statsLoading } = useOwnerStats({ enabled: isOwner })
+const { data: myCampaigns, isLoading: campaignsLoading } = useMyCampaigns({ enabled: isOwner })
 
 const activeCampaigns = computed(() =>
   myCampaigns.value?.campaigns.filter((c) => c.status === 'active' || c.status === 'funded') ?? []

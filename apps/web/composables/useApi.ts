@@ -141,12 +141,13 @@ export function useCampaign(id: Ref<string>) {
 }
 
 /** Fetches campaigns owned by the authenticated user. */
-export function useMyCampaigns() {
+export function useMyCampaigns(opts?: { enabled?: MaybeRef<boolean> }) {
   const { fetchApi } = useApi()
 
   return useQuery({
     queryKey: ['campaigns', 'mine'],
     queryFn: () => fetchApi<CampaignListResponse>('/me/campaigns'),
+    enabled: opts?.enabled !== undefined ? toRef(opts.enabled) : true,
   })
 }
 
@@ -158,12 +159,13 @@ export interface OwnerStats {
   total_remaining: number
 }
 
-export function useOwnerStats() {
+export function useOwnerStats(opts?: { enabled?: MaybeRef<boolean> }) {
   const { fetchApi } = useApi()
 
   return useQuery({
     queryKey: ['campaigns', 'stats'],
     queryFn: () => fetchApi<OwnerStats>('/me/campaigns/stats'),
+    enabled: opts?.enabled !== undefined ? toRef(opts.enabled) : true,
   })
 }
 

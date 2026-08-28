@@ -47,7 +47,7 @@ const totalSubmissions = computed(() => {
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <SharedStatCard
           label="Total earnings"
-          :value="formatPaise(earnings.total_earnings)"
+          :value="formatPaise(earnings.total_earnings ?? 0)"
           :icon="Wallet"
         />
         <SharedStatCard

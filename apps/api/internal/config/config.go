@@ -22,8 +22,10 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	// Attempt to load .env file if present, ignore error if missing
+	// Attempt to load .env file if present, ignore error if missing.
+	// Try current directory first, then parent (repo root).
 	_ = godotenv.Load()
+	_ = godotenv.Load("../../.env")
 
 	cfg := &Config{
 		Port:                  getEnv("PORT", "8080"),

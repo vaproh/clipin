@@ -83,7 +83,7 @@ const { data: earnings } = useMyEarnings()
         />
         <SharedStatCard
           label="Total spent"
-          :value="statsLoading ? '...' : formatPaise(totalSpent)"
+          :value="statsLoading ? '...' : formatPaise(totalSpent ?? 0)"
           :icon="CircleDollarSign"
         />
         <SharedStatCard
@@ -132,7 +132,7 @@ const { data: earnings } = useMyEarnings()
                 <div class="text-sm font-medium text-white truncate">{{ campaign.title }}</div>
                 <div class="flex items-center gap-2 text-[11px] font-mono text-neutral-500">
                   <SharedStatusBadge :status="campaign.status" />
-                  <span>{{ formatPaise(campaign.remaining_budget) }} remaining</span>
+                    <span>{{ formatPaise(campaign.remaining_budget ?? 0) }} remaining</span>
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -156,7 +156,7 @@ const { data: earnings } = useMyEarnings()
                   <div class="text-sm font-medium text-white truncate">{{ campaign.title }}</div>
                   <div class="flex items-center gap-2 text-[11px] font-mono text-neutral-500">
                     <SharedStatusBadge :status="campaign.status" />
-                    <span>{{ formatPaise(campaign.total_budget) }} total</span>
+                    <span>{{ formatPaise(campaign.total_budget ?? 0) }} total</span>
                   </div>
                 </div>
                 <ArrowRight class="w-3.5 h-3.5 text-neutral-500 shrink-0" />
@@ -173,7 +173,7 @@ const { data: earnings } = useMyEarnings()
         <SharedStatCard label="Role" value="Clipper" :icon="Scissors" />
         <SharedStatCard
           label="Earnings"
-          :value="earnings ? formatPaise(earnings.total_earnings) : '—'"
+          :value="earnings ? formatPaise(earnings.total_earnings ?? 0) : '—'"
           :icon="Wallet"
           hint="verified view earnings"
         />
@@ -193,7 +193,7 @@ const { data: earnings } = useMyEarnings()
       <SharedStatCard label="Active campaigns" value="0" :icon="Megaphone" />
       <SharedStatCard
         label="Earnings"
-        :value="earnings ? formatPaise(earnings.total_earnings) : '—'"
+        :value="earnings ? formatPaise(earnings.total_earnings ?? 0) : '—'"
         :icon="Wallet"
         hint="verified view earnings"
       />

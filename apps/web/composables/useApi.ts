@@ -146,7 +146,7 @@ export function useMyCampaigns() {
 
   return useQuery({
     queryKey: ['campaigns', 'mine'],
-    queryFn: () => fetchApi<CampaignListResponse>('/campaigns/mine'),
+    queryFn: () => fetchApi<CampaignListResponse>('/me/campaigns'),
   })
 }
 

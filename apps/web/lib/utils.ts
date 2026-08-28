@@ -7,9 +7,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Convert paise to ₹ display with Indian comma separators. */
-export function formatPaise(amount: number): string {
-  if (amount < 0) return '-' + formatPaise(-amount)
-  const rupees = amount / 100
+export function formatPaise(amount: number | undefined | null): string {
+  const val = amount ?? 0
+  if (val < 0) return '-' + formatPaise(-val)
+  const rupees = val / 100
   return '₹' + rupees.toLocaleString('en-IN', { maximumFractionDigits: 0 })
 }
 

@@ -100,7 +100,7 @@ const totalSubmissions = computed(() => {
       <div v-if="earnings.recent_entries.length > 0" class="space-y-3">
         <h3 class="text-sm font-semibold text-white">Recent entries</h3>
         <div class="rounded bg-neutral-950 border border-neutral-800 px-4 divide-y-0">
-          <LedgerLedgerEntryRow
+          <LedgerEntryRow
             v-for="entry in earnings.recent_entries"
             :key="entry.id"
             :entry="entry"

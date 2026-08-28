@@ -57,7 +57,7 @@ const stats = computed(() => ({
 
       <!-- Submission list -->
       <div class="space-y-3">
-        <SubmissionSubmissionCard
+        <SubmissionCard
           v-for="sub in sortedSubmissions"
           :key="sub.id"
           :submission="sub"

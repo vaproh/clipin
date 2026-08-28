@@ -28,7 +28,7 @@ function setPage(page: number) {
   <div class="space-y-5">
     <SharedPageHeader title="Campaigns" description="Browse & launch performance clipping campaigns" />
 
-    <CampaignCampaignFilters v-model="filters" />
+    <CampaignFilters v-model="filters" />
 
     <!-- Search result count -->
     <p v-if="data && !isLoading" class="text-xs font-mono text-neutral-500">
@@ -54,7 +54,7 @@ function setPage(page: number) {
     <!-- Campaign grid -->
     <template v-else>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <CampaignCampaignCard
+        <CampaignCard
           v-for="campaign in data.campaigns"
           :key="campaign.id"
           :campaign="campaign"

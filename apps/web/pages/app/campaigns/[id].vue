@@ -229,7 +229,7 @@ function relativeDate(dateStr: string | null): string {
 
             <!-- Ledger entries -->
             <div v-if="campaignLedger.entries.length > 0" class="rounded bg-neutral-950 border border-neutral-800 px-4">
-              <LedgerLedgerEntryRow
+              <LedgerEntryRow
                 v-for="entry in campaignLedger.entries.slice(0, 10)"
                 :key="entry.id"
                 :entry="entry"
@@ -252,7 +252,7 @@ function relativeDate(dateStr: string | null): string {
 
           <SharedLoadingSpinner v-if="analyticsLoading" />
 
-          <CampaignCampaignAnalytics
+          <CampaignAnalytics
             v-else-if="campaignAnalytics"
             :analytics="campaignAnalytics"
             :total-budget="campaign.total_budget"
@@ -341,7 +341,7 @@ function relativeDate(dateStr: string | null): string {
         </div>
 
         <div class="space-y-3">
-          <SubmissionSubmissionCard
+          <SubmissionCard
             v-for="sub in campaignSubmissions.slice(0, 5)"
             :key="sub.id"
             :submission="sub"

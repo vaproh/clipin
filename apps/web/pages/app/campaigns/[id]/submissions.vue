@@ -241,7 +241,7 @@ function confirmReject() {
 
       <!-- Submission list -->
       <div v-else class="space-y-3">
-        <SubmissionSubmissionCard
+        <SubmissionCard
           v-for="sub in filteredSubmissions"
           :key="sub.id"
           :submission="sub"

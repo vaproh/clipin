@@ -25,7 +25,6 @@ services/verifier/bin/
 vendor/
 
 # sqlc generated (regenerate with sqlc generate)
-apps/api/internal/db/sqlc/
 
 # Environment & Secrets
 .env

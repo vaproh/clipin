@@ -41,7 +41,7 @@
 |---|---|---|---|
 | Web frontend | `apps/web/` | ClipIN | Nuxt 3 SSR app, Clerk auth, marketplace UI |
 | API server | `apps/api/` | ClipIN | Go backend, business logic, financial ledger |
-| Verifier | `services/verifier/` | External | Fetches social metrics, writes snapshots to shared DB |
+| Verifier | `services/verifier/` | External | Fetches social metrics, writes snapshots to shared DB (stub only, see TODO.md) |
 
 ## Data flow
 
@@ -65,8 +65,8 @@
 
 ## Testing
 
-- **Backend**: Go `testing` + `httptest` (191 tests across 13 packages). Service tests mock DB interfaces.
-- **Frontend**: Vitest + @vue/test-utils (23 tests). Utility and component smoke tests.
+- **Backend**: Go `testing` + `httptest` (337 tests across 13 packages). Postgres integration tests (82 tests, real database). Service tests mock DB interfaces.
+- **Frontend**: Vitest + @vue/test-utils (49 tests). Utility and component smoke tests.
 - **E2E**: Playwright with desktop + mobile projects (57 tests). Clerk stub module for testing without live auth instance. Visual QA with screenshot baselines.
 
 Test commands:

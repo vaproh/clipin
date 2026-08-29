@@ -38,7 +38,7 @@ India's performance clipping marketplace.
 ### External
 
 - Clerk Auth
-- Razorpay (stubbed)
+- Razorpay (test mode)
 - Cloudflare
 
 ## Local development
@@ -101,9 +101,10 @@ just test
 Individual test suites:
 
 ```bash
-just test-api       # Go backend (191 tests)
-just test-web       # Vitest frontend (23 tests)
-just test-e2e       # Playwright E2E (57 tests)
+just test-api          # Go backend (337 tests)
+just test-integration  # Postgres integration (82 tests)
+just test-web          # Vitest frontend (49 tests)
+just test-e2e          # Playwright E2E (57 tests)
 ```
 
 Update visual QA baselines:
@@ -116,7 +117,7 @@ just test-e2e-update
 
 Open marketplace for performance clipping campaigns. Content owners fund escrow pools, clippers publish short-form clips, verified views drive earnings and UPI payouts.
 
-All milestones M0-M9 are complete. Mobile-optimized. Testing infrastructure in place. Deployment excluded until production infra exists.
+All milestones M0-M9 are complete. Additional features: analytics dashboard, notification system (7 triggers), clipper reputation/leveling (4 tiers), RazorpayX SDK integration (test mode), Playwright E2E + visual QA, Redis caching (6 caches). Deployment excluded until production infra exists. See [TODO.md](TODO.md) for next phase.
 
 | Milestone | Deliverable | Status |
 |---|---|---|
@@ -127,7 +128,7 @@ All milestones M0-M9 are complete. Mobile-optimized. Testing infrastructure in p
 | M4 | Submissions (lifecycle, review, dedupe, auto-approve) | Done |
 | M5 | Verification contract (metric snapshots, deltas) | Done |
 | M6 | Append-only financial ledger (idempotent entries) | Done |
-| M7 | Payouts (UPI, stubbed Razorpay, webhook) | Done |
+| M7 | Payouts (UPI, RazorpayX SDK, webhook) | Done |
 | M8 | Admin controls, fraud flags, audit logs, rate limiting | Done |
 | M9 | Launch polish (SEO, meta tags, build verification) | Done |
 | Mobile | Hamburger drawer, touch targets, overflow fixes | Done |
@@ -138,11 +139,11 @@ All milestones M0-M9 are complete. Mobile-optimized. Testing infrastructure in p
 ```text
 apps/
   web/                  # Nuxt 3 frontend
-    components/         # Vue components (app/, campaign/, landing/, ledger/, shared/, submission/, ui/)
+    components/         # Vue components (app/, campaign/, landing/, ledger/, settings/, shared/, submission/, ui/)
     composables/        # TanStack Query composables
     e2e/                # Playwright E2E + visual QA tests
     layouts/            # Nuxt layouts (default, app)
-    pages/              # Nuxt pages (landing, auth, app/*)
+    pages/              # Nuxt pages (landing, auth, app/*) - 19 pages
     lib/                # Utilities (formatPaise, cn)
     assets/css/         # Tailwind + design tokens
     vitest.config.ts    # Vitest configuration
@@ -151,21 +152,25 @@ apps/
   api/                  # Go API server
     cmd/api/            # API entrypoint
     cmd/migrate/        # Migration CLI (up/down/status/goto)
-    db/migrations/      # SQL migrations (000001-000008)
-    db/query.sql        # sqlc query definitions
+    db/migrations/      # SQL migrations (000001-000009)
+    db/query.sql        # sqlc query definitions (100+ queries)
     internal/
       auth/             # JWT + session middleware
       config/           # Environment configuration
       db/sqlc/          # Generated models + queries
-      http/handlers/    # Huma handlers (health, user, campaign, submission, verification, ledger, payout, admin)
+      http/handlers/    # Huma handlers (16 handler files)
+      integration/      # Postgres integration tests (82 tests)
       middleware/        # Rate limiter
-      payout/           # PayoutProvider interface + Razorpay stub
+      payout/           # PayoutProvider interface + Razorpay SDK
       redis/            # Redis client
-      service/          # Business logic (campaign, submission, verification, ledger, payout, audit, fraud)
+      service/          # Business logic (16 service files)
       worker/           # Background workers (auto-approve, payout processor)
 
 services/
-  verifier/             # View verification service (externally owned)
+  verifier/             # View verification service (stub only, see TODO.md)
+
+infra/
+  docker/               # Docker configurations (planned)
 
 docs/
   architecture.md
@@ -173,6 +178,7 @@ docs/
 
 PRD.md                  # Product requirements
 AGENTS.md               # Engineering principles + execution plan
+TODO.md                 # Next phase: verifier + mobile
 justfile                # Developer commands
 docker-compose.yml      # PostgreSQL + Redis
 .env.example            # Environment template

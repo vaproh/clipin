@@ -196,13 +196,14 @@ Always follow the TDD development workflow:
 
 #### Backend
 
-- Unit tests with Go `testing` + `httptest` (191+ tests)
+- Unit tests with Go `testing` + `httptest` (337 tests across 13 packages)
+- Postgres integration tests (82 tests, real database)
 - Service tests mock DB interfaces
 - Financial-critical paths thoroughly tested (ledger arithmetic, budget caps, idempotency)
 
 #### Frontend
 
-- Unit tests with Vitest + @vue/test-utils + happy-dom (23+ tests)
+- Unit tests with Vitest + @vue/test-utils + happy-dom (49 tests)
 - Test composables, utilities, and shared components
 - Run: `cd apps/web && npx vitest run`
 
@@ -297,11 +298,11 @@ Open self-serve marketplace. No clipper application or vetting gate. Anyone can 
 
 ### Verification boundary
 
-The `services/verifier` is owned and operated externally. It writes metric snapshots to a shared `metric_snapshots` table. The main backend reads snapshots and computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract.
+The `services/verifier` is scaffolded but currently a stub (only `/health` endpoint). It should write metric snapshots to a shared `metric_snapshots` table. The main backend reads snapshots and computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract and `TODO.md` for implementation plan.
 
 ### Payouts
 
-Razorpay stubbed behind a `PayoutProvider` interface until the account is available. Webhook endpoint built, signature-checked, disabled until keys exist.
+RazorpayX SDK integrated (test mode). `PayoutProvider` interface with real implementation behind it. Webhook endpoint built, signature-checked, disabled until production keys exist.
 
 ### UI approach
 
@@ -327,3 +328,5 @@ Sequential by milestone. Within each: tests first (TDD), small conventional comm
 | M7 | Payouts: UPI, stubbed provider, webhook endpoint | Done |
 | M8 | Admin controls, fraud flags, audit logs | Done |
 | M9 | Launch polish: SEO, notifications, perf | Done |
+
+All milestones M0-M9 are complete. See [TODO.md](TODO.md) for the next phase: verifier service implementation and mobile PWA.

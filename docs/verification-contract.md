@@ -2,6 +2,8 @@
 
 The `services/verifier` is an external service that writes to the main database. This document defines the write contract.
 
+**Note:** The verifier is currently a stub (only `/health` endpoint). Implementation plan is in `TODO.md`.
+
 ## The verifier's only job
 
 Given a submitted social post URL, retrieve and normalize available public metrics.

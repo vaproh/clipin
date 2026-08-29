@@ -2,7 +2,7 @@
 import type { SelectScrollUpButtonProps } from 'reka-ui'
 
 import type { HTMLAttributes } from 'vue'
-import { ChevronUpIcon } from '@lucide/vue'
+import { ChevronUpIcon } from 'lucide-vue-next'
 import { reactiveOmit } from '@vueuse/core'
 import { SelectScrollUpButton, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'

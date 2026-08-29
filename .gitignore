@@ -58,3 +58,6 @@ apps/web/e2e-snapshots/
 
 # Playwright MCP
 .playwright-mcp/
+
+# opencode internal config
+.opencode/

@@ -60,3 +60,4 @@ apps/web/e2e-snapshots/
 
 # opencode internal config
 .opencode/
+*.png

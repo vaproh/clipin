@@ -34,17 +34,59 @@ The verifier is the critical missing piece. Without it, no views get verified an
 - [ ] Write tests (mock YouTube API responses)
 - [ ] Deploy verifier as separate Docker container
 
-### Phase 2: Instagram Reels support
+### Phase 2: Instagram Reels support (VERIFIED METHOD, 2026-09-04)
 
-- [ ] Instagram Basic Display API or GraphQL scraping
-- [ ] Parse Instagram Reel URLs
-- [ ] Extract metrics
-- [ ] Handle auth (Instagram requires app review for production)
-- [ ] Write tests
+Instagram views are obtainable anonymously, free, plain HTTP, no browser, no
+paid API. Verified working from a datacenter IP on 2026-09-04.
+
+Method (3 HTTP calls, reference implementation `/tmp` prototype `ig_views.py`):
+
+1. `GET https://www.instagram.com/` -> anonymous `csrftoken` cookie (desktop
+   Chrome UA, session persists cookies)
+2. `POST /graphql/query` doc_id `27128499623469141` with compact-JSON variables
+   `{"shortcode":"...","__relay_internal__pv__PolarisAIGMMediaWebLabelEnabledrelayprovider":false}`
+   -> `data.xdt_api__v1__media__shortcode__web_info.items[0]` carries
+   `user.pk`, `user.username`, `like_count`, `comment_count`, `code`,
+   `taken_at`. (`view_count` is null here - login-gated, ignore it.)
+3. `POST /graphql/query` doc_id `27234427476213202` with variables
+   `{"data":{"include_feed_video":true,"page_size":12,"target_user_id":"<pk>"}}`
+   -> iterate `data.xdt_api__v1__clips__user__connection_v2.edges[].node.media`,
+   match `code == shortcode`, read `play_count` (the real "views" counter).
+
+Headers for both GraphQL calls: `X-CSRFToken` (from call 1), `X-IG-App-ID:
+936619743392459`, `X-ASBD-ID: 129477`, `X-Requested-With: XMLHttpRequest`,
+`Origin`/`Referer: https://www.instagram.com/`, form-urlencoded.
+
+Verified: 3,465,648 views on reference reel, view count ticks in near-real-time
+(+45 in 65s), zero authenticated cookies, garbage shortcodes cleanly rejected.
+
+Known pitfalls (all verified):
+
+- `doc_ids` are version-pinned relay queries that rotate. On `execution error`
+  refresh from instaloader master (`instaloader/structures.py`, search
+  `doc_id_graphql_query`). Disambiguate rotation vs bad shortcode by probing a
+  known-good control shortcode.
+- The reel must be in the owner's last N reels (page_size 12, retry 50). Older
+  posts surface a clean "not in feed" error - acceptable for recent submissions.
+- Rate limits: anonymous GraphQL tolerates a few req/min; keep polling sparse
+  (>=60s per reel), reuse the session, back off on 429.
+- Do NOT send cookies beyond what call 1 sets. No login, no sessionid, ever.
+
+Tasks:
+
+- [ ] Port the 3-call method to Go in the verifier (`igclient` package)
+- [ ] Parse Instagram Reel/Post URLs (reels/, reel/, p/, tv/, ?igsh junk)
+- [ ] Extract: play_count (views), like_count, comment_count, username, taken_at
+- [ ] Handle private/deleted/not-in-feed gracefully
+- [ ] Per-session request pacing (>=60s per reel), 429 backoff
+- [ ] Doc-id rotation recovery (config override + control-shortcode probe)
+- [ ] Write tests (mock GraphQL responses)
+
 
 ### Phase 3: TikTok support
 
-- [ ] TikTok Research API (requires application)
+- [ ] Anonymous page scrape: public video page embeds JSON with views, likes,
+  comments, shares (no auth needed - proven by albeethekid/metadata-api)
 - [ ] Parse TikTok URLs
 - [ ] Extract metrics
 - [ ] Write tests

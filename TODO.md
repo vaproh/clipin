@@ -68,6 +68,9 @@ Known pitfalls (all verified):
   known-good control shortcode.
 - The reel must be in the owner's last N reels (page_size 12, retry 50). Older
   posts surface a clean "not in feed" error - acceptable for recent submissions.
+  Not finding the reel in feed pages is NOT a hard failure: mark views
+  unverified and poll again on the next cycle (rare feed-excluded reels, e.g.
+  pinned/restricted, may never appear - those stay unverified, never estimate).
 - Rate limits: anonymous GraphQL tolerates a few req/min; keep polling sparse
   (>=60s per reel), reuse the session, back off on 429.
 - Do NOT send cookies beyond what call 1 sets. No login, no sessionid, ever.

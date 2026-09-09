@@ -28,7 +28,7 @@ type CampaignServiceInterface interface {
 // --- Public marketplace ---
 
 type listCampaignsInput struct {
-	Platform  string `query:"platform" doc:"Filter by platform (youtube, instagram, tiktok, multi)"`
+	Platform  string `query:"platform" doc:"Filter by platform (youtube, instagram, multi)"`
 	MaxCPM    int    `query:"max_cpm" doc:"Max CPM rate in paise per 1000 views"`
 	MinBudget int    `query:"min_budget" doc:"Minimum remaining budget in paise"`
 	Q         string `query:"q" doc:"Search campaigns by title or description (case-insensitive)"`
@@ -37,25 +37,25 @@ type listCampaignsInput struct {
 }
 
 type campaignListItem struct {
-	ID                 string  `json:"id"`
-	OwnerID            string  `json:"owner_id"`
-	Title              string  `json:"title"`
-	Description        *string `json:"description,omitempty"`
-	BriefURL           *string `json:"brief_url,omitempty"`
-	Platform           string  `json:"platform"`
-	Status             string  `json:"status"`
-	CpmRate            int32   `json:"cpm_rate"`
-	TotalBudget        int32   `json:"total_budget"`
-	RemainingBudget    int32   `json:"remaining_budget"`
-	PlatformFee        int32   `json:"platform_fee"`
-	MaxClipsPerCampaign *int32 `json:"max_clips_per_campaign,omitempty"`
-	MaxClipsPerClipper  *int32 `json:"max_clips_per_clipper,omitempty"`
-	MinViewsPerClip     *int32 `json:"min_views_per_clip,omitempty"`
-	AutoApproveHours    *int32 `json:"auto_approve_hours,omitempty"`
-	StartsAt           *string `json:"starts_at,omitempty"`
-	EndsAt             *string `json:"ends_at,omitempty"`
-	CreatedAt          string  `json:"created_at"`
-	UpdatedAt          string  `json:"updated_at"`
+	ID                  string  `json:"id"`
+	OwnerID             string  `json:"owner_id"`
+	Title               string  `json:"title"`
+	Description         *string `json:"description,omitempty"`
+	BriefURL            *string `json:"brief_url,omitempty"`
+	Platform            string  `json:"platform"`
+	Status              string  `json:"status"`
+	CpmRate             int32   `json:"cpm_rate"`
+	TotalBudget         int32   `json:"total_budget"`
+	RemainingBudget     int32   `json:"remaining_budget"`
+	PlatformFee         int32   `json:"platform_fee"`
+	MaxClipsPerCampaign *int32  `json:"max_clips_per_campaign,omitempty"`
+	MaxClipsPerClipper  *int32  `json:"max_clips_per_clipper,omitempty"`
+	MinViewsPerClip     *int32  `json:"min_views_per_clip,omitempty"`
+	AutoApproveHours    *int32  `json:"auto_approve_hours,omitempty"`
+	StartsAt            *string `json:"starts_at,omitempty"`
+	EndsAt              *string `json:"ends_at,omitempty"`
+	CreatedAt           string  `json:"created_at"`
+	UpdatedAt           string  `json:"updated_at"`
 }
 
 type listCampaignsOutput struct {
@@ -227,7 +227,7 @@ type createCampaignInput struct {
 		Title               string  `json:"title" doc:"Campaign title (1-200 chars)"`
 		Description         *string `json:"description,omitempty" doc:"Campaign description"`
 		BriefURL            *string `json:"brief_url,omitempty" doc:"Link to campaign brief"`
-		Platform            string  `json:"platform" doc:"Platform: youtube, instagram, tiktok, multi"`
+		Platform            string  `json:"platform" doc:"Platform: youtube, instagram, multi"`
 		CpmRate             int32   `json:"cpm_rate" doc:"Rate per 1000 views in paise"`
 		TotalBudget         int32   `json:"total_budget" doc:"Total budget in paise"`
 		MaxClipsPerCampaign *int32  `json:"max_clips_per_campaign,omitempty" doc:"Max clips for this campaign"`
@@ -498,4 +498,3 @@ func RegisterCampaignOwnerHandlers(api huma.API, svc CampaignServiceInterface) {
 		return resp, nil
 	})
 }
-

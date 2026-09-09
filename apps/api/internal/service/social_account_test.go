@@ -122,6 +122,24 @@ func TestSocialAccountConnectEmptyUsername(t *testing.T) {
 	}
 }
 
+func TestSocialAccountConnectRejectsTikTok(t *testing.T) {
+	called := false
+	store := &mockSocialAccountStore{
+		upsert: func(_ context.Context, _ sqlc.UpsertSocialAccountParams) (sqlc.SocialAccount, error) {
+			called = true
+			return sqlc.SocialAccount{}, nil
+		},
+	}
+	svc := service.NewSocialAccountService(store)
+	_, err := svc.Connect(context.Background(), "user1", "tiktok", "123", "creator")
+	if err != service.ErrInvalidPlatform {
+		t.Fatalf("expected ErrInvalidPlatform, got %v", err)
+	}
+	if called {
+		t.Fatal("did not expect TikTok account to be persisted")
+	}
+}
+
 func TestSocialAccountDisconnect(t *testing.T) {
 	accountID := pgtype.UUID{Bytes: [16]byte{42}, Valid: true}
 	store := &mockSocialAccountStore{

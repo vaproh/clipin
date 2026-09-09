@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Youtube, Instagram, Music, Link, Unlink } from 'lucide-vue-next'
+import { Youtube, Instagram, Link, Unlink } from 'lucide-vue-next'
 import type { SocialAccount } from '~/composables/useApi'
 
 const { data: accounts, isLoading } = useSocialAccounts()
@@ -13,7 +13,6 @@ const platformUsername = ref('')
 const platformOptions = [
   { value: 'youtube', label: 'YouTube', icon: Youtube },
   { value: 'instagram', label: 'Instagram', icon: Instagram },
-  { value: 'tiktok', label: 'TikTok', icon: Music },
 ]
 
 function handleConnect() {
@@ -46,7 +45,7 @@ function formatDate(dateStr: string) {
 }
 
 function platformIcon(platform: string) {
-  return platformOptions.find((p) => p.value === platform)?.icon ?? Music
+  return platformOptions.find((p) => p.value === platform)?.icon ?? Link
 }
 </script>
 

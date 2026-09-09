@@ -19,7 +19,7 @@ export interface Campaign {
   title: string
   description: string | null
   brief_url: string | null
-  platform: 'youtube' | 'instagram' | 'tiktok' | 'multi'
+  platform: 'youtube' | 'instagram' | 'multi'
   status: 'draft' | 'funded' | 'active' | 'paused' | 'completed' | 'cancelled'
   cpm_rate: number
   total_budget: number
@@ -174,7 +174,7 @@ export interface CreateCampaignBody {
   title: string
   description?: string
   brief_url?: string
-  platform: 'youtube' | 'instagram' | 'tiktok' | 'multi'
+  platform: 'youtube' | 'instagram' | 'multi'
   cpm_rate: number
   total_budget: number
   max_clips_per_campaign?: number
@@ -581,7 +581,7 @@ export function useCampaignLedger(campaignId: Ref<string>) {
 export interface SocialAccount {
   id: string
   user_id: string
-  platform: 'youtube' | 'instagram' | 'tiktok'
+  platform: 'youtube' | 'instagram'
   platform_user_id: string
   platform_username: string | null
   created_at: string
@@ -676,7 +676,7 @@ export function useCampaignAnalytics(campaignId: Ref<string>) {
 export interface CampaignTemplate {
   id: string
   name: string
-  platform: 'youtube' | 'instagram' | 'tiktok' | 'multi'
+  platform: 'youtube' | 'instagram' | 'multi'
   cpm_rate: number
   total_budget: number
   max_clips_per_clipper: number

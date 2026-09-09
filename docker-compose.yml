@@ -31,6 +31,31 @@ services:
       timeout: 5s
       retries: 5
 
+  verifier:
+    profiles: ["app"]
+    build:
+      context: ./services/verifier
+    restart: unless-stopped
+    environment:
+      VERIFIER_PORT: 8081
+      VERIFIER_ENV: ${VERIFIER_ENV:-development}
+      VERIFIER_API_BASE: ${VERIFIER_API_BASE:-http://host.docker.internal:8080}
+      VERIFIER_API_KEY: ${VERIFIER_API_KEY:-}
+      VERIFIER_POLL_INTERVAL: ${VERIFIER_POLL_INTERVAL:-15m}
+      VERIFIER_BATCH_SIZE: ${VERIFIER_BATCH_SIZE:-20}
+      VERIFIER_HTTP_TIMEOUT: ${VERIFIER_HTTP_TIMEOUT:-30s}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${VERIFIER_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 volumes:
   postgres_data:
     name: clipin_postgres_data

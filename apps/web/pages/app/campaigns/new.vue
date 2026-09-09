@@ -36,7 +36,6 @@ const netBudget = computed(() => form.total_budget - platformFee.value)
 const platformOptions = [
   { value: 'youtube', label: 'YouTube' },
   { value: 'instagram', label: 'Instagram' },
-  { value: 'tiktok', label: 'TikTok' },
   { value: 'multi', label: 'Multi-platform' },
 ] as const
 
@@ -55,9 +54,9 @@ function validateStep2(): boolean {
   clearErrors()
   if (!form.cpm_rate || form.cpm_rate <= 0) errors.cpm_rate = 'CPM rate must be greater than 0'
   if (!form.total_budget || form.total_budget <= 0) errors.total_budget = 'Total budget must be greater than 0'
-  if (form.min_views_per_clip < 0) errors.min_views_per_clip = 'Cannot be negative'
-  if (form.max_clips_per_clipper < 1) errors.max_clips_per_clipper = 'Must be at least 1'
-  if (form.auto_approve_hours < 1) errors.auto_approve_hours = 'Must be at least 1'
+  if ((form.min_views_per_clip ?? 0) < 0) errors.min_views_per_clip = 'Cannot be negative'
+  if ((form.max_clips_per_clipper ?? 0) < 1) errors.max_clips_per_clipper = 'Must be at least 1'
+  if ((form.auto_approve_hours ?? 0) < 1) errors.auto_approve_hours = 'Must be at least 1'
   return Object.keys(errors).length === 0
 }
 
@@ -421,7 +420,7 @@ function clearTemplate() {
 
         <div class="flex justify-between">
           <span class="text-neutral-400">Min views / clip</span>
-          <span class="text-white">{{ form.min_views_per_clip.toLocaleString('en-IN') }}</span>
+          <span class="text-white">{{ (form.min_views_per_clip ?? 0).toLocaleString('en-IN') }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-neutral-400">Max clips / clipper</span>
@@ -484,5 +483,3 @@ function clearTemplate() {
     </div>
   </div>
 </template>
-
-

@@ -35,10 +35,6 @@ export default defineNuxtConfig({
       }
     : undefined,
 
-  site: {
-    url: process.env.NUXT_PUBLIC_SITE_URL || 'https://clipin.in',
-  },
-
   modules: [
     ...(process.env.E2E_TEST
       ? []
@@ -66,10 +62,36 @@ export default defineNuxtConfig({
               footerActionLink: 'text-white hover:underline font-medium',
             },
           },
-        }]]),
+        }] as const]),
     '@nuxtjs/tailwindcss',
     '@vueuse/nuxt',
-  ],
+    ...(process.env.E2E_TEST ? [] : ['@vite-pwa/nuxt']),
+  ] as any,
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'ClipIN - Performance Clipping Marketplace',
+      short_name: 'ClipIN',
+      description: 'Create clips, publish them, and earn from verified views.',
+      start_url: '/app',
+      scope: '/',
+      display: 'standalone',
+      background_color: '#010102',
+      theme_color: '#010102',
+      icons: [
+        { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        { src: '/maskable-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      ],
+    },
+    workbox: {
+      cleanupOutdatedCaches: true,
+      navigateFallbackDenylist: [/^\/api\//],
+    },
+    devOptions: {
+      enabled: false,
+    },
+  },
 
   runtimeConfig: {
     clerkSecretKey: process.env.CLERK_SECRET_KEY || process.env.NUXT_CLERK_SECRET_KEY,

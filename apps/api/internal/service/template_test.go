@@ -283,13 +283,12 @@ func TestSeedDefaultTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(created) != 4 {
-		t.Fatalf("expected 4 templates seeded, got %d", len(created))
+	if len(created) != 3 {
+		t.Fatalf("expected 3 templates seeded, got %d", len(created))
 	}
 	expected := []string{
 		"YouTube Short - Gaming",
 		"Instagram Reel - Lifestyle",
-		"TikTok - Trending",
 		"Multi-platform - Brand",
 	}
 	for i, name := range expected {
@@ -303,7 +302,7 @@ func TestSeedDefaultTemplates_AlreadySeeded(t *testing.T) {
 	createCalled := false
 	store := &mockTemplateStore{
 		count: func(_ context.Context) (int32, error) {
-			return 4, nil
+			return 3, nil
 		},
 		create: func(_ context.Context, _ sqlc.CreateCampaignTemplateParams) (sqlc.CampaignTemplate, error) {
 			createCalled = true

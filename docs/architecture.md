@@ -41,7 +41,7 @@
 |---|---|---|---|
 | Web frontend | `apps/web/` | ClipIN | Nuxt 3 SSR app, Clerk auth, marketplace UI |
 | API server | `apps/api/` | ClipIN | Go backend, business logic, financial ledger |
-| Verifier | `services/verifier/` | ClipIN | Polls the API, fetches YouTube/Instagram metrics, writes snapshots through the internal API |
+| Verifier | `services/verifier/` | ClipIN | Polls the API, fetches YouTube/Instagram metrics, writes snapshots through the internal API; exposes `/health` and Prometheus `/metrics` |
 
 ## Data flow
 
@@ -65,7 +65,7 @@
 
 ## Testing
 
-- **Backend**: Go `testing` + `httptest` (337 API tests, 61 verifier tests). Postgres integration tests (82 tests, real database). Service tests mock DB interfaces.
+- **Backend**: Go `testing` + `httptest` (358 API tests, 63 verifier tests). Postgres integration tests (82 tests, real database). Service tests mock DB interfaces.
 - **Frontend**: Vitest + @vue/test-utils (49 tests). Utility and component smoke tests.
 - **E2E**: Playwright with desktop + mobile projects (57 tests). Clerk stub module for testing without live auth instance. Visual QA with screenshot baselines.
 

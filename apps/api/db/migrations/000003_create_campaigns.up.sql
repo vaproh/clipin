@@ -4,7 +4,7 @@ CREATE TABLE campaigns (
     title TEXT NOT NULL,
     description TEXT,
     brief_url TEXT,                         -- link to detailed brief
-    platform TEXT NOT NULL,                 -- 'youtube' | 'instagram' | 'tiktok' | 'multi'
+    platform TEXT NOT NULL,                 -- 'youtube' | 'instagram' | 'multi'
     status TEXT NOT NULL DEFAULT 'draft',   -- 'draft' | 'funded' | 'active' | 'paused' | 'completed' | 'cancelled'
     cpm_rate INTEGER NOT NULL,              -- paise per 1000 views (e.g. 5000 = ₹50/1k)
     total_budget INTEGER NOT NULL,          -- paise

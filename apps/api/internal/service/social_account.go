@@ -29,6 +29,7 @@ func NewSocialAccountService(store SocialAccountStore) *SocialAccountService {
 // Sentinel errors for social account operations.
 var (
 	ErrAccountNotFound = fmt.Errorf("social account not found")
+	ErrInvalidPlatform = fmt.Errorf("social accounts support YouTube and Instagram only")
 )
 
 // ListByUser returns all social accounts for a user.
@@ -38,6 +39,9 @@ func (s *SocialAccountService) ListByUser(ctx context.Context, userID string) ([
 
 // Connect upserts a social account for a user (stub, no real OAuth).
 func (s *SocialAccountService) Connect(ctx context.Context, userID, platform, platformUserID, platformUsername string) (*sqlc.SocialAccount, error) {
+	if platform != "youtube" && platform != "instagram" {
+		return nil, ErrInvalidPlatform
+	}
 	var username pgtype.Text
 	if platformUsername != "" {
 		username = pgtype.Text{Valid: true, String: platformUsername}

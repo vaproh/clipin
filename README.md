@@ -47,6 +47,7 @@ India's performance clipping marketplace.
 - YouTube Data API v3 provider
 - Anonymous Instagram GraphQL provider (`play_count` views)
 - Writes append-only metric snapshots through the main API
+- `/health` liveness and `/metrics` Prometheus monitoring endpoints
 
 ## Local development
 
@@ -89,6 +90,12 @@ just api        # Go API (http://localhost:8080)
 just verifier   # Go verifier (http://localhost:8081)
 ```
 
+Run the containerized verifier with its healthcheck:
+
+```bash
+just verifier-container
+```
+
 Database migrations:
 
 ```bash
@@ -108,7 +115,7 @@ just test
 Individual test suites:
 
 ```bash
-just test-api          # Go backend (337 tests)
+just test-api          # Go backend (358 tests)
 just test-integration  # Postgres integration (82 tests)
 just test-web          # Vitest frontend (49 tests)
 just test-e2e          # Playwright E2E (57 tests)
@@ -175,7 +182,7 @@ apps/
       worker/           # Background workers (auto-approve, payout processor)
 
 services/
-  verifier/             # View verification service (stub only, see TODO.md)
+  verifier/             # YouTube/Instagram metrics worker, Dockerized with monitoring
 
 infra/
   docker/               # Docker configurations (planned)

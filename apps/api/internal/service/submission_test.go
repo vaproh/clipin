@@ -197,7 +197,7 @@ func TestSubmit_PlatformMismatch(t *testing.T) {
 		},
 	}
 	svc := service.NewSubmissionService(store)
-	_, err := svc.Submit(context.Background(), testCampaignID, "clipper1", "https://youtube.com/watch?v=abc", "tiktok")
+	_, err := svc.Submit(context.Background(), testCampaignID, "clipper1", "https://instagram.com/reel/abc", "instagram")
 	if err != service.ErrPlatformMismatch {
 		t.Errorf("expected ErrPlatformMismatch, got %v", err)
 	}
@@ -221,12 +221,12 @@ func TestSubmit_MultiPlatformCampaign(t *testing.T) {
 		},
 	}
 	svc := service.NewSubmissionService(store)
-	sub, err := svc.Submit(context.Background(), testCampaignID, "clipper1", "https://tiktok.com/@user/video/123", "tiktok")
+	sub, err := svc.Submit(context.Background(), testCampaignID, "clipper1", "https://instagram.com/reel/abc", "instagram")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if sub.Platform != "tiktok" {
-		t.Errorf("expected platform tiktok, got %s", sub.Platform)
+	if sub.Platform != "instagram" {
+		t.Errorf("expected platform instagram, got %s", sub.Platform)
 	}
 }
 

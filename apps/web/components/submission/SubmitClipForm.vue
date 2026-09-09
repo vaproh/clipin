@@ -15,10 +15,9 @@ const platformOptions = computed(() => {
     return [
       { value: 'youtube', label: 'YouTube' },
       { value: 'instagram', label: 'Instagram' },
-      { value: 'tiktok', label: 'TikTok' },
     ]
   }
-  const labels: Record<string, string> = { youtube: 'YouTube', instagram: 'Instagram', tiktok: 'TikTok' }
+  const labels: Record<string, string> = { youtube: 'YouTube', instagram: 'Instagram' }
   return [{ value: props.campaign.platform, label: labels[props.campaign.platform] ?? props.campaign.platform }]
 })
 

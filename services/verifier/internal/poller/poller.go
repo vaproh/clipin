@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"clipin/services/verifier/internal/api"
+	"clipin/services/verifier/internal/monitor"
 	"clipin/services/verifier/internal/provider"
 )
 
@@ -19,15 +20,26 @@ type Poller struct {
 	Logger      *slog.Logger
 	HTTPTimeout time.Duration
 	ProviderFor func(string) provider.Provider
+	Monitor     *monitor.Monitor
 }
 
 // RunOnce executes a single poll cycle. It lists pending submissions, routes each
 // to the appropriate provider, fetches metrics, and records successful snapshots.
 // Errors on individual submissions are logged and skipped; only a list failure is returned.
 func (p *Poller) RunOnce(ctx context.Context) error {
+	if p.Monitor != nil {
+		p.Monitor.PollStarted()
+	}
 	submissions, err := p.Client.ListPending(ctx, p.BatchSize)
 	if err != nil {
+		if p.Monitor != nil {
+			p.Monitor.PollFailed()
+		}
 		return fmt.Errorf("list pending: %w", err)
+	}
+	if p.Monitor != nil {
+		p.Monitor.PollSucceeded()
+		p.Monitor.SubmissionsSeen(len(submissions))
 	}
 
 	if len(submissions) == 0 {
@@ -61,6 +73,9 @@ func (p *Poller) processSubmission(ctx context.Context, sub api.Submission) {
 
 	metrics, err := prov.Fetch(ctx, sub.PostURL)
 	if err != nil {
+		if p.Monitor != nil {
+			p.Monitor.ProviderFailed()
+		}
 		p.Logger.Info("fetch failed, skipping",
 			"submission_id", sub.SubmissionID,
 			"url", sub.PostURL,
@@ -85,6 +100,9 @@ func (p *Poller) processSubmission(ctx context.Context, sub api.Submission) {
 			"error", err,
 		)
 		return
+	}
+	if p.Monitor != nil {
+		p.Monitor.SnapshotRecorded()
 	}
 
 	p.Logger.Info("snapshot recorded",

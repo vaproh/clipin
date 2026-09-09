@@ -154,7 +154,7 @@ func TestListSocialAccountsMultiple(t *testing.T) {
 
 	seedUser(t, "sa_multi1", "multi1@sa.com", "clipper")
 
-	for _, p := range []string{"youtube", "instagram", "tiktok"} {
+	for _, p := range []string{"youtube", "instagram"} {
 		_, err := testDB.Queries.CreateSocialAccount(context.Background(), sqlc.CreateSocialAccountParams{
 			UserID:         "sa_multi1",
 			Platform:       p,

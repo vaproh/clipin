@@ -2,7 +2,7 @@
 
 ## Priority 1: Verifier Service
 
-The verifier is the critical missing piece. Without it, no views get verified and nobody gets paid.
+The verifier is implemented. Remaining verifier work is deployment and operational hardening.
 
 ### Architecture
 
@@ -43,10 +43,10 @@ Ported the 3-call anonymous GraphQL protocol from `reference/ig_views.py` to Go.
 
 ### Infrastructure
 
-- [ ] Add `services/verifier/Dockerfile`
-- [ ] Add to docker-compose.yml
-- [ ] Add CI workflow for verifier
-- [ ] Add health check monitoring
+- [x] Add `services/verifier/Dockerfile`
+- [x] Add verifier to docker-compose.yml (`app` profile)
+- [x] Add CI workflow for verifier
+- [x] Add `/health`, Prometheus `/metrics`, and container health checks
 
 ## Priority 2: Mobile App (PWA)
 
@@ -54,17 +54,17 @@ Clippers primarily use phones. A PWA is the fastest path to mobile without nativ
 
 ### Phase 1: PWA Foundation
 
-- [ ] Add Nuxt PWA module (`@vite-pwa/nuxt`)
-- [ ] Create `public/manifest.json` with app metadata
-- [ ] Add service worker for offline caching
-- [ ] Add install prompt banner
-- [ ] Add splash screens
+- [x] Add Nuxt PWA module (`@vite-pwa/nuxt`)
+- [x] Create generated manifest with app metadata and icons
+- [x] Add service worker for precached app assets
+- [x] Add install prompt banner
+- [x] Add standalone theme and maskable app icons
 - [ ] Configure push notifications (Web Push API)
 - [ ] Test on Android Chrome + iOS Safari
 
 ### Phase 2: Mobile-Optimized UI
 
-- [ ] Bottom tab bar for primary navigation (Campaigns, Submissions, Earnings, Profile)
+- [x] Bottom tab bar for primary navigation (Overview, Campaigns, Submissions, Earnings)
 - [ ] Pull-to-refresh on list pages
 - [ ] Swipe gestures for submission approve/reject (owner)
 - [ ] Haptic feedback on key actions
@@ -85,7 +85,7 @@ Clippers primarily use phones. A PWA is the fastest path to mobile without nativ
 - [ ] Cache campaign listings for offline browsing
 - [ ] Queue clip submissions when offline
 - [ ] Sync when back online
-- [ ] Show offline indicator
+- [x] Show offline indicator
 
 ## Priority 3: Growth Features
 

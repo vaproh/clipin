@@ -13,6 +13,7 @@ import (
 	"clipin/services/verifier/internal/api"
 	"clipin/services/verifier/internal/config"
 	verifierhttp "clipin/services/verifier/internal/http"
+	"clipin/services/verifier/internal/monitor"
 	"clipin/services/verifier/internal/poller"
 	"clipin/services/verifier/internal/provider"
 
@@ -39,6 +40,8 @@ func main() {
 		Logger:      logger,
 		HTTPTimeout: cfg.HTTPTimeout,
 	}
+	serviceMonitor := &monitor.Monitor{}
+	p.Monitor = serviceMonitor
 	p.ProviderFor = func(postURL string) provider.Provider {
 		return provider.RouteToProvider(postURL, cfg.YouTubeAPIKey, &http.Client{Timeout: cfg.HTTPTimeout})
 	}
@@ -49,7 +52,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	verifierhttp.RegisterRoutes(r, cfg.Env)
+	verifierhttp.RegisterRoutes(r, cfg.Env, serviceMonitor)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),

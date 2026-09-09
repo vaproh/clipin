@@ -15,6 +15,14 @@ db-up:
 db-down:
     docker compose down
 
+# Start the verifier container with its healthcheck
+verifier-container:
+    docker compose --profile app up --build verifier
+
+# Show verifier container logs
+verifier-logs:
+    docker compose --profile app logs -f verifier
+
 # View database service logs
 db-logs:
     docker compose logs -f

@@ -196,7 +196,7 @@ Always follow the TDD development workflow:
 
 #### Backend
 
-- Unit tests with Go `testing` + `httptest` (337 API tests plus 61 verifier tests)
+- Unit tests with Go `testing` + `httptest` (358 API tests plus 63 verifier tests)
 - Postgres integration tests (82 tests, real database)
 - Service tests mock DB interfaces
 - Financial-critical paths thoroughly tested (ledger arithmetic, budget caps, idempotency)

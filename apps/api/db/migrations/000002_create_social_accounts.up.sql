@@ -1,7 +1,7 @@
 CREATE TABLE social_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    platform TEXT NOT NULL,                 -- 'youtube' | 'instagram' | 'tiktok'
+    platform TEXT NOT NULL,                 -- 'youtube' | 'instagram'
     platform_user_id TEXT NOT NULL,         -- channel ID, username etc.
     platform_username TEXT,
     access_token TEXT,

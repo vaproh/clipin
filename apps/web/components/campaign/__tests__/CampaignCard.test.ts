@@ -89,14 +89,12 @@ describe('platformLabel mapping', () => {
   const platformLabel: Record<string, string> = {
     youtube: 'YouTube',
     instagram: 'Instagram',
-    tiktok: 'TikTok',
     multi: 'Multi',
   }
 
   it('maps known platforms', () => {
     expect(platformLabel['youtube']).toBe('YouTube')
     expect(platformLabel['instagram']).toBe('Instagram')
-    expect(platformLabel['tiktok']).toBe('TikTok')
     expect(platformLabel['multi']).toBe('Multi')
   })
 

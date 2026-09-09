@@ -380,7 +380,7 @@ func TestCreateCampaign_HappyPath(t *testing.T) {
 func TestCreateCampaign_ValidationError(t *testing.T) {
 	svc := &mockCampaignService{
 		create: func(ctx context.Context, ownerID string, in *service.CreateCampaignInput) (*sqlc.Campaign, error) {
-			return nil, &service.ValidationError{Errors: []string{"title is required", "platform must be one of: youtube, instagram, tiktok, multi"}}
+			return nil, &service.ValidationError{Errors: []string{"title is required", "platform must be one of: youtube, instagram, multi"}}
 		},
 	}
 	router := ownerRouter(svc, ownerUser)

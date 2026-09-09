@@ -56,7 +56,6 @@ const totalWithFee = computed(() => (form.total_budget ?? 0) + platformFee.value
 const platformOptions = [
   { value: 'youtube', label: 'YouTube' },
   { value: 'instagram', label: 'Instagram' },
-  { value: 'tiktok', label: 'TikTok' },
   { value: 'multi', label: 'Multi-platform' },
 ] as const
 

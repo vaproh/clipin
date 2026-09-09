@@ -37,6 +37,7 @@
     "@nuxtjs/tailwindcss": "^6.13.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^22.13.4",
+    "@vite-pwa/nuxt": "^1.1.1",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.4.11",
     "autoprefixer": "^10.4.20",

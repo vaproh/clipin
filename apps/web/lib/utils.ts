@@ -18,7 +18,6 @@ export function platformLabel(platform: string): string {
   const labels: Record<string, string> = {
     youtube: 'YouTube',
     instagram: 'Instagram',
-    tiktok: 'TikTok',
     multi: 'Multi-platform',
   }
   return labels[platform] || platform

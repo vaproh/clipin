@@ -10,7 +10,6 @@ import (
 var validPlatforms = map[string]bool{
 	"youtube":  true,
 	"instagram": true,
-	"tiktok":   true,
 	"multi":    true,
 }
 
@@ -73,7 +72,7 @@ func ValidateCreateCampaign(in *CreateCampaignInput) error {
 
 	// platform: must be one of the valid set
 	if !validPlatforms[in.Platform] {
-		ve.Add("platform must be one of: youtube, instagram, tiktok, multi")
+		ve.Add("platform must be one of: youtube, instagram, multi")
 	}
 
 	// cpm_rate: > 0, max 100000 paise (₹1000 per 1k views)

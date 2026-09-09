@@ -78,7 +78,6 @@ function clearFilters() {
           <UiSelectItem value="all">All platforms</UiSelectItem>
           <UiSelectItem value="youtube">YouTube</UiSelectItem>
           <UiSelectItem value="instagram">Instagram</UiSelectItem>
-          <UiSelectItem value="tiktok">TikTok</UiSelectItem>
           <UiSelectItem value="multi">Multi</UiSelectItem>
         </UiSelectContent>
       </UiSelect>

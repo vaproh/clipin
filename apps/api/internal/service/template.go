@@ -193,16 +193,6 @@ var defaultTemplates = []defaultTemplate{
 		DescriptionTemplate: "Create an engaging Reel featuring lifestyle content.",
 	},
 	{
-		Name:                "TikTok - Trending",
-		Platform:            "tiktok",
-		CpmRate:             1000, // Rs 10 in paise
-		TotalBudget:         200000,
-		MaxClipsPerClipper:  5,
-		MinViewsPerClip:     500,
-		AutoApproveHours:    24,
-		DescriptionTemplate: "Create a trending TikTok clip with viral potential.",
-	},
-	{
 		Name:                "Multi-platform - Brand",
 		Platform:            "multi",
 		CpmRate:             2500, // Rs 25 in paise

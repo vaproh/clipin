@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sqlc "clipin/apps/api/internal/db/sqlc"
+	"clipin/apps/api/internal/service"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -92,6 +94,9 @@ func RegisterSocialAccountHandlers(api huma.API, svc SocialAccountServiceInterfa
 
 		account, err := svc.Connect(ctx, user.ID, input.Body.Platform, input.Body.PlatformUserID, input.Body.PlatformUsername)
 		if err != nil {
+			if errors.Is(err, service.ErrInvalidPlatform) {
+				return nil, huma.Error422UnprocessableEntity("platform must be youtube or instagram")
+			}
 			return nil, huma.Error500InternalServerError("failed to connect social account")
 		}
 
@@ -133,7 +138,7 @@ func RegisterSocialAccountHandlers(api huma.API, svc SocialAccountServiceInterfa
 
 type connectSocialAccountInput struct {
 	Body struct {
-		Platform         string `json:"platform" doc:"Platform (youtube, instagram, tiktok)"`
+		Platform         string `json:"platform" doc:"Platform (youtube, instagram)"`
 		PlatformUserID   string `json:"platform_user_id" doc:"Platform user/channel ID"`
 		PlatformUsername string `json:"platform_username,omitempty" doc:"Platform username"`
 	}

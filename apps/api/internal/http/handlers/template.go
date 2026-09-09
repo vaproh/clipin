@@ -239,13 +239,13 @@ func RegisterTemplateHandlers(api huma.API, svc TemplateServiceInterface) {
 
 type createTemplateInput struct {
 	Body struct {
-		Name                string `json:"name" doc:"Template name"`
-		Platform            string `json:"platform" doc:"Platform (youtube, instagram, tiktok, multi)"`
-		CpmRate             int32  `json:"cpm_rate" doc:"CPM rate in paise"`
-		TotalBudget         int32  `json:"total_budget" doc:"Total budget in paise"`
-		MaxClipsPerClipper  *int32 `json:"max_clips_per_clipper,omitempty" doc:"Max clips per clipper"`
-		MinViewsPerClip     *int32 `json:"min_views_per_clip,omitempty" doc:"Min views per clip"`
-		AutoApproveHours    *int32 `json:"auto_approve_hours,omitempty" doc:"Auto-approve after hours"`
+		Name                string  `json:"name" doc:"Template name"`
+		Platform            string  `json:"platform" doc:"Platform (youtube, instagram, multi)"`
+		CpmRate             int32   `json:"cpm_rate" doc:"CPM rate in paise"`
+		TotalBudget         int32   `json:"total_budget" doc:"Total budget in paise"`
+		MaxClipsPerClipper  *int32  `json:"max_clips_per_clipper,omitempty" doc:"Max clips per clipper"`
+		MinViewsPerClip     *int32  `json:"min_views_per_clip,omitempty" doc:"Min views per clip"`
+		AutoApproveHours    *int32  `json:"auto_approve_hours,omitempty" doc:"Auto-approve after hours"`
 		DescriptionTemplate *string `json:"description_template,omitempty" doc:"Description template text"`
 	}
 }
@@ -263,13 +263,13 @@ type templateOutput struct {
 type updateTemplateInput struct {
 	ID   string `path:"id" doc:"Template ID"`
 	Body struct {
-		Name                string `json:"name" doc:"Template name"`
-		Platform            string `json:"platform" doc:"Platform (youtube, instagram, tiktok, multi)"`
-		CpmRate             int32  `json:"cpm_rate" doc:"CPM rate in paise"`
-		TotalBudget         int32  `json:"total_budget" doc:"Total budget in paise"`
-		MaxClipsPerClipper  *int32 `json:"max_clips_per_clipper,omitempty" doc:"Max clips per clipper"`
-		MinViewsPerClip     *int32 `json:"min_views_per_clip,omitempty" doc:"Min views per clip"`
-		AutoApproveHours    *int32 `json:"auto_approve_hours,omitempty" doc:"Auto-approve after hours"`
+		Name                string  `json:"name" doc:"Template name"`
+		Platform            string  `json:"platform" doc:"Platform (youtube, instagram, multi)"`
+		CpmRate             int32   `json:"cpm_rate" doc:"CPM rate in paise"`
+		TotalBudget         int32   `json:"total_budget" doc:"Total budget in paise"`
+		MaxClipsPerClipper  *int32  `json:"max_clips_per_clipper,omitempty" doc:"Max clips per clipper"`
+		MinViewsPerClip     *int32  `json:"min_views_per_clip,omitempty" doc:"Min views per clip"`
+		AutoApproveHours    *int32  `json:"auto_approve_hours,omitempty" doc:"Auto-approve after hours"`
 		DescriptionTemplate *string `json:"description_template,omitempty" doc:"Description template text"`
 	}
 }

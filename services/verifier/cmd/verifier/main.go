@@ -3,26 +3,44 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"clipin/services/verifier/internal/api"
 	"clipin/services/verifier/internal/config"
 	verifierhttp "clipin/services/verifier/internal/http"
+	"clipin/services/verifier/internal/poller"
+	"clipin/services/verifier/internal/provider"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
-	log.Println("Starting ClipIN Verifier service...")
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
+	}
+
+	client := api.NewClient(cfg.APIBase, cfg.APIKey, cfg.HTTPTimeout)
+
+	p := &poller.Poller{
+		Client:      client,
+		YouTubeKey:  cfg.YouTubeAPIKey,
+		BatchSize:   cfg.BatchSize,
+		Logger:      logger,
+		HTTPTimeout: cfg.HTTPTimeout,
+	}
+	p.ProviderFor = func(postURL string) provider.Provider {
+		return provider.RouteToProvider(postURL, cfg.YouTubeAPIKey, &http.Client{Timeout: cfg.HTTPTimeout})
 	}
 
 	r := chi.NewRouter()
@@ -41,9 +59,15 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start poller in background
+	go p.Run(ctx, cfg.PollInterval)
+
 	serverErrors := make(chan error, 1)
 	go func() {
-		log.Printf("ClipIN Verifier service running on http://localhost:%s", cfg.Port)
+		slog.Info("verifier starting", "port", cfg.Port, "env", cfg.Env)
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -53,21 +77,24 @@ func main() {
 	select {
 	case err := <-serverErrors:
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			slog.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	case sig := <-shutdown:
-		log.Printf("Received signal %v, initiating graceful shutdown...", sig)
+		slog.Info("shutdown signal received", "signal", sig)
+		cancel()
 
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer shutdownCancel()
 
 		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Graceful shutdown failed: %v", err)
+			slog.Error("graceful shutdown failed", "error", err)
 			if err := server.Close(); err != nil {
-				log.Fatalf("Forced server close failed: %v", err)
+				slog.Error("forced server close failed", "error", err)
+				os.Exit(1)
 			}
 		}
 	}
 
-	log.Println("ClipIN Verifier service stopped clean")
+	slog.Info("verifier stopped")
 }

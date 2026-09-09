@@ -1,8 +1,8 @@
 # Verification Contract
 
-The `services/verifier` is an external service that writes to the main database. This document defines the write contract.
+The `services/verifier` is a separate worker that submits snapshots to the main API. This document defines the write contract.
 
-**Note:** The verifier is currently a stub (only `/health` endpoint). Implementation plan is in `TODO.md`.
+The verifier is implemented at `services/verifier/` with YouTube and Instagram providers. It polls the internal list endpoint, fetches metrics, and writes snapshots through the internal snapshot endpoint.
 
 ## The verifier's only job
 
@@ -20,7 +20,7 @@ The main backend decides what verified metrics mean financially.
 
 ## Write target: `metric_snapshots` table
 
-The verifier writes rows to the `public.metric_snapshots` table.
+The main API writes rows to the `public.metric_snapshots` table from verifier submissions.
 
 ### Table schema
 
@@ -74,7 +74,6 @@ Adjust based on platform rate limits and cost. These are starting points.
 |---|---|---|
 | YouTube Shorts | Data API v3 `videos.list` (1 unit per call, exact integer counts) | High |
 | Instagram Reels | Unauthenticated GraphQL (reverse-engineered, no API key) | Best-effort; may break |
-| TikTok | External responsibility | N/A |
 
 If a platform fetch fails, the verifier should not write a snapshot. The main backend handles missing snapshots gracefully.
 

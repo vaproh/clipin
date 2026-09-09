@@ -70,6 +70,11 @@ test-api:
 test-api-verbose:
     cd apps/api && go test -v ./...
 
+# Run Go verifier tests
+test-verifier:
+    @echo "==> Testing verifier..."
+    cd services/verifier && go test ./...
+
 # Run frontend unit tests (vitest)
 test-web:
     @echo "==> Testing Web Frontend..."
@@ -85,9 +90,10 @@ test-e2e-update:
     @echo "==> Updating visual QA baselines..."
     cd apps/web && bunx playwright test --update-snapshots
 
-# Run all unit/integration tests (API + frontend)
+# Run all unit/integration tests (API + verifier + frontend)
 test:
     @just test-api
+    @just test-verifier
     @just test-web
 
 # Run Postgres integration tests against a real database

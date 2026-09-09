@@ -20,7 +20,7 @@ func RegisterRoutes(r chi.Router, env string) {
 			Status:      "ok",
 			Service:     "clipin-verifier",
 			Environment: env,
-			Description: "Social verification engine scaffold",
+			Description: "Social metrics polling worker",
 		}
 
 		w.Header().Set("Content-Type", "application/json")

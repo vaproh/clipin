@@ -41,6 +41,13 @@ India's performance clipping marketplace.
 - Razorpay (test mode)
 - Cloudflare
 
+### Verifier
+
+- Go polling worker at `services/verifier/`
+- YouTube Data API v3 provider
+- Anonymous Instagram GraphQL provider (`play_count` views)
+- Writes append-only metric snapshots through the main API
+
 ## Local development
 
 Prerequisites:
@@ -105,6 +112,7 @@ just test-api          # Go backend (337 tests)
 just test-integration  # Postgres integration (82 tests)
 just test-web          # Vitest frontend (49 tests)
 just test-e2e          # Playwright E2E (57 tests)
+cd services/verifier && go test ./...  # verifier (61 tests)
 ```
 
 Update visual QA baselines:
@@ -117,7 +125,7 @@ just test-e2e-update
 
 Open marketplace for performance clipping campaigns. Content owners fund escrow pools, clippers publish short-form clips, verified views drive earnings and UPI payouts.
 
-All milestones M0-M9 are complete. Additional features: analytics dashboard, notification system (7 triggers), clipper reputation/leveling (4 tiers), RazorpayX SDK integration (test mode), Playwright E2E + visual QA, Redis caching (6 caches). Deployment excluded until production infra exists. See [TODO.md](TODO.md) for next phase.
+All milestones M0-M9 are complete. Additional features: analytics dashboard, notification system (7 triggers), clipper reputation/leveling (4 tiers), RazorpayX SDK integration (test mode), Playwright E2E + visual QA, Redis caching (6 caches), and the verifier polling worker. Deployment excluded until production infra exists. See [TODO.md](TODO.md) for remaining mobile and deployment work.
 
 | Milestone | Deliverable | Status |
 |---|---|---|

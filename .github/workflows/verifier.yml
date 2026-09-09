@@ -1,0 +1,29 @@
+name: Verifier CI
+
+on:
+  push:
+    paths:
+      - 'services/verifier/**'
+      - '.github/workflows/verifier.yml'
+  pull_request:
+    paths:
+      - 'services/verifier/**'
+      - '.github/workflows/verifier.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Test
+        run: go test -race -count=1 ./...
+        working-directory: services/verifier
+      - name: Vet
+        run: go vet ./...
+        working-directory: services/verifier
+      - name: Build
+        run: go build ./...
+        working-directory: services/verifier

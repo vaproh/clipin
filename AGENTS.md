@@ -196,7 +196,7 @@ Always follow the TDD development workflow:
 
 #### Backend
 
-- Unit tests with Go `testing` + `httptest` (337 tests across 13 packages)
+- Unit tests with Go `testing` + `httptest` (337 API tests plus 61 verifier tests)
 - Postgres integration tests (82 tests, real database)
 - Service tests mock DB interfaces
 - Financial-critical paths thoroughly tested (ledger arithmetic, budget caps, idempotency)
@@ -298,7 +298,7 @@ Open self-serve marketplace. No clipper application or vetting gate. Anyone can 
 
 ### Verification boundary
 
-The `services/verifier` is scaffolded but currently a stub (only `/health` endpoint). It should write metric snapshots to a shared `metric_snapshots` table. The main backend reads snapshots and computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract and `TODO.md` for implementation plan.
+The `services/verifier` polls the main API for approved submissions, fetches YouTube and Instagram metrics, and writes snapshots through the internal snapshot endpoint. It does not own balances, campaign budgets, payout decisions, or earnings calculations. The main backend computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract and `TODO.md` for remaining deployment/mobile work.
 
 ### Payouts
 
@@ -329,4 +329,4 @@ Sequential by milestone. Within each: tests first (TDD), small conventional comm
 | M8 | Admin controls, fraud flags, audit logs | Done |
 | M9 | Launch polish: SEO, notifications, perf | Done |
 
-All milestones M0-M9 are complete. See [TODO.md](TODO.md) for the next phase: verifier service implementation and mobile PWA.
+All milestones M0-M9 are complete. The verifier service is implemented; see [TODO.md](TODO.md) for remaining deployment and mobile PWA work.

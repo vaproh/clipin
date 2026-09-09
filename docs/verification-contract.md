@@ -43,7 +43,7 @@ CREATE INDEX idx_metric_snapshots_captured_at ON metric_snapshots(captured_at);
 ### Write rules
 
 1. **Append-only.** Never update or delete existing snapshots. A new snapshot always adds a new row.
-2. **One row per poll.** Each poll of a post URL produces exactly one snapshot row.
+2. **One row per successful fetch.** A poll that cannot retrieve metrics does not write a snapshot and is retried later.
 3. **Values are point-in-time.** Views/likes/comments/shares are the platform-reported values at `captured_at`, not deltas.
 4. **`submission_id` is a foreign key.** The verifier receives submission IDs and writes snapshots against them. The verifier does not create or modify submissions.
 5. **Never NULL on core metrics.** `views` must always be provided. `likes`, `comments`, `shares` default to 0 if the platform doesn't expose them.
@@ -76,6 +76,12 @@ Adjust based on platform rate limits and cost. These are starting points.
 | Instagram Reels | Unauthenticated GraphQL (reverse-engineered, no API key) | Best-effort; may break |
 
 If a platform fetch fails, the verifier should not write a snapshot. The main backend handles missing snapshots gracefully.
+
+The verifier exposes unauthenticated operational endpoints for container and
+Prometheus monitoring:
+
+- `GET /health` — process liveness
+- `GET /metrics` — poll cycles, provider failures, snapshot writes, and latest poll timestamps
 
 ### Error handling
 

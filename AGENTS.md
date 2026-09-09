@@ -231,6 +231,9 @@ Important events:
 
 Do not log passwords, tokens, payment secrets, or sensitive credentials.
 
+The verifier exposes `/health` for liveness and `/metrics` for Prometheus
+counters covering poll cycles, provider failures, and recorded snapshots.
+
 ### 15. Documentation
 
 Update documentation when architecture or workflows change.
@@ -282,6 +285,8 @@ Before marking work complete:
 
 Open self-serve marketplace. No clipper application or vetting gate. Anyone can sign up, browse campaigns, and submit clips. Verification and fraud controls are the quality moat — not curation.
 
+Supported campaign platforms are YouTube and Instagram. TikTok is not part of the India-focused product scope.
+
 ### Campaign mechanics (research-backed)
 
 - Escrow-funded pools: campaigns only go live after deposit. No unfunded campaigns.
@@ -298,7 +303,7 @@ Open self-serve marketplace. No clipper application or vetting gate. Anyone can 
 
 ### Verification boundary
 
-The `services/verifier` polls the main API for approved submissions, fetches YouTube and Instagram metrics, and writes snapshots through the internal snapshot endpoint. It does not own balances, campaign budgets, payout decisions, or earnings calculations. The main backend computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract and `TODO.md` for remaining deployment/mobile work.
+The `services/verifier` polls the main API for approved submissions, fetches YouTube and Instagram metrics, and writes snapshots through the internal snapshot endpoint. It does not own balances, campaign budgets, payout decisions, or earnings calculations. The main backend computes all financial logic (growth deltas, engagement ratios, eligible views, earnings). See `docs/verification-contract.md` for the write contract and `TODO.md` for remaining PWA capabilities and production operations.
 
 ### Payouts
 
@@ -306,11 +311,11 @@ RazorpayX SDK integrated (test mode). `PayoutProvider` interface with real imple
 
 ### UI approach
 
-shadcn-vue installed just-in-time per milestone. Shared primitives (PageHeader, StatCard, StatusBadge, EmptyState) built as each page needs them. Design system tokens in `tailwind.config.js` + `main.css`. Vitest unit tests for components and composables. Playwright E2E + visual QA on every new screen (desktop + mobile).
+shadcn-vue installed just-in-time per milestone. Shared primitives (PageHeader, StatCard, StatusBadge, EmptyState) built as each page needs them. Design system tokens in `tailwind.config.js` + `main.css`. The Nuxt PWA module provides installability, a service worker, offline status, and mobile bottom navigation. Vitest unit tests for components and composables. Playwright E2E + visual QA on every new screen (desktop + mobile).
 
 ### Deployment
 
-Excluded from current scope. Planned separately when production VPS / Cloudflare infrastructure exists.
+Production deployment remains excluded until the VPS / Cloudflare infrastructure exists. The verifier already has a local Docker image, Compose `app` profile, CI workflow, healthcheck, and Prometheus metrics endpoint.
 
 ## Execution Order
 
@@ -329,4 +334,4 @@ Sequential by milestone. Within each: tests first (TDD), small conventional comm
 | M8 | Admin controls, fraud flags, audit logs | Done |
 | M9 | Launch polish: SEO, notifications, perf | Done |
 
-All milestones M0-M9 are complete. The verifier service is implemented; see [TODO.md](TODO.md) for remaining deployment and mobile PWA work.
+All milestones M0-M9 are complete. The verifier and PWA foundation are implemented; see [TODO.md](TODO.md) for remaining push/offline capabilities and production operations.

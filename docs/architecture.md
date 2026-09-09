@@ -25,14 +25,14 @@
                     ┌──────────────────┐
                     │  services/        │
                     │  verifier         │
-                    │  (writes to       │
-                    │  metric_snapshots)│
+                     │  (polls API and   │
+                     │  submits metrics) │
                     └────────┬─────────┘
                              │
-                    ┌────────▼─────────┐
-                    │   PostgreSQL      │
-                    │   (metric_snapshots)
-                    └──────────────────┘
+                     ┌────────▼─────────┐
+                     │  Internal API     │
+                     │  snapshot writes  │
+                     └──────────────────┘
 ```
 
 ## Services
@@ -47,7 +47,7 @@
 
 1. **Campaign creation**: owner creates campaign (validated, platform fee calculated) → campaign goes live with funded status.
 2. **Clipper submission**: clipper submits post URL → dedup check, clipper limit check → pending → owner reviews (approve/reject) or auto-approve after N hours.
-3. **Verification**: verifier polls submission URLs → writes snapshots to `metric_snapshots` via internal API (X-Verifier-Key auth).
+3. **Verification**: verifier polls submission URLs → submits snapshots through the internal API (X-Verifier-Key auth) → API writes `metric_snapshots`.
 4. **Earnings**: main backend reads snapshots → computes eligible views (delta × CPM) → creates idempotent ledger entries → updates campaign remaining budget.
 5. **Payout**: clipper requests withdrawal (₹500 min) → Razorpay stub processes → ledger updated with payout entry.
 
@@ -61,7 +61,7 @@
 ## Database ownership
 
 - `public.*` (users, profiles, roles, social_accounts, campaigns, submissions, ledger_entries, withdrawals, audit_logs) — owned by the main API.
-- `public.metric_snapshots` — written by the verifier, read by the main API for earnings computation.
+- `public.metric_snapshots` — written by the main API from verifier submissions, read by the main API for earnings computation.
 
 ## Testing
 
@@ -75,4 +75,5 @@ just test-api        # Go backend tests
 just test-web        # Vitest frontend tests
 just test-e2e        # Playwright E2E + visual QA
 just test            # all unit/integration tests
+just verifier-container # containerized verifier with healthcheck
 ```

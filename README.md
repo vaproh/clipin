@@ -119,7 +119,7 @@ just test-api          # Go backend (358 tests)
 just test-integration  # Postgres integration (82 tests)
 just test-web          # Vitest frontend (49 tests)
 just test-e2e          # Playwright E2E (57 tests)
-cd services/verifier && go test ./...  # verifier (61 tests)
+cd services/verifier && go test ./...  # verifier (63 tests)
 ```
 
 Update visual QA baselines:
@@ -132,7 +132,7 @@ just test-e2e-update
 
 Open marketplace for performance clipping campaigns. Content owners fund escrow pools, clippers publish short-form clips, verified views drive earnings and UPI payouts.
 
-All milestones M0-M9 are complete. Additional features: analytics dashboard, notification system (7 triggers), clipper reputation/leveling (4 tiers), RazorpayX SDK integration (test mode), Playwright E2E + visual QA, Redis caching (6 caches), and the verifier polling worker. Deployment excluded until production infra exists. See [TODO.md](TODO.md) for remaining mobile and deployment work.
+All milestones M0-M9 are complete. Additional features: analytics dashboard, notification system (7 triggers), clipper reputation/leveling (4 tiers), RazorpayX SDK integration (test mode), Playwright E2E + visual QA, Redis caching (6 caches), the verifier polling worker, and the PWA foundation. Production deployment is excluded until infrastructure exists. See [TODO.md](TODO.md) for remaining PWA capabilities and production operations.
 
 | Milestone | Deliverable | Status |
 |---|---|---|
@@ -146,7 +146,7 @@ All milestones M0-M9 are complete. Additional features: analytics dashboard, not
 | M7 | Payouts (UPI, RazorpayX SDK, webhook) | Done |
 | M8 | Admin controls, fraud flags, audit logs, rate limiting | Done |
 | M9 | Launch polish (SEO, meta tags, build verification) | Done |
-| Mobile | Hamburger drawer, touch targets, overflow fixes | Done |
+| Mobile | PWA install flow, service worker, offline indicator, bottom navigation | Done |
 | Testing | Vitest unit tests, Playwright E2E + visual QA | Done |
 
 ## Repository structure
@@ -185,7 +185,7 @@ services/
   verifier/             # YouTube/Instagram metrics worker, Dockerized with monitoring
 
 infra/
-  docker/               # Docker configurations (planned)
+  docker/               # Reserved for production deployment configuration
 
 docs/
   architecture.md
@@ -193,7 +193,7 @@ docs/
 
 PRD.md                  # Product requirements
 AGENTS.md               # Engineering principles + execution plan
-TODO.md                 # Next phase: verifier + mobile
+TODO.md                 # Remaining PWA, deployment, and growth work
 justfile                # Developer commands
 docker-compose.yml      # PostgreSQL + Redis
 .env.example            # Environment template

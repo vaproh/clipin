@@ -2,7 +2,7 @@
 
 ## Priority 1: Verifier Service
 
-The verifier is implemented. Remaining verifier work is deployment and operational hardening.
+The verifier is implemented. Remaining verifier work is production deployment and operational hardening.
 
 ### Architecture
 
@@ -28,7 +28,8 @@ The verifier is implemented. Remaining verifier work is deployment and operation
 - [x] POST snapshot to main API
 - [x] Add polling worker (background goroutine, configurable interval)
 - [x] Write tests (mock YouTube API responses)
-- [ ] Deploy verifier as separate Docker container
+- [x] Build a separate verifier Docker container
+- [ ] Deploy verifier to production infrastructure
 
 ### Phase 2: Instagram Reels support (DONE)
 
@@ -60,7 +61,7 @@ Clippers primarily use phones. A PWA is the fastest path to mobile without nativ
 - [x] Add install prompt banner
 - [x] Add standalone theme and maskable app icons
 - [ ] Configure push notifications (Web Push API)
-- [ ] Test on Android Chrome + iOS Safari
+- [ ] Test installation on Android Chrome + iOS Safari
 
 ### Phase 2: Mobile-Optimized UI
 

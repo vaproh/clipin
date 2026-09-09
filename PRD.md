@@ -270,6 +270,13 @@ External:
 - Razorpay
 - social-platform verification mechanisms
 
+Supported launch platforms:
+
+- YouTube Shorts
+- Instagram Reels
+
+TikTok is outside the India-focused product scope.
+
 ## 12. Initial Deployment
 
 Initial infrastructure is intentionally minimal.
@@ -371,7 +378,7 @@ Do not build:
 - Growth deltas + engagement-ratio + eligible-views math computed by main backend
 - `docs/verification-contract.md` defining the snapshot write contract
 - Verification status surfaced in clipper and owner UIs
-- The `services/verifier` is owned and operated externally — writes snapshots to this table; no Redis stream or stubbed fetcher needed from the main backend
+- The `services/verifier` is a separate Go worker operated with the ClipIN stack. It polls the main API, fetches YouTube and Instagram metrics, and submits snapshots through the internal API. It does not write PostgreSQL directly and does not own financial logic.
 
 ### M6 — Earnings / Ledger
 
@@ -445,6 +452,10 @@ All milestones M0-M9 are complete. Additional features built:
 - RazorpayX SDK integration (test mode)
 - Playwright E2E + visual QA testing
 - Redis caching (6 caches)
+- Verifier worker with YouTube and Instagram providers
+- PWA foundation with install flow, service worker, offline indicator, and mobile navigation
+- Verifier Docker image, CI workflow, healthcheck, and Prometheus metrics
 - 82 Postgres integration tests
+- 358 API tests, 63 verifier tests, 49 frontend tests, and 57 Playwright tests
 
-See TODO.md for the next phase: verifier service and mobile app.
+The verifier is implemented with YouTube and Instagram providers. The PWA foundation, install flow, service worker, offline indicator, mobile navigation, Docker image, CI, and Prometheus monitoring are also implemented. See [TODO.md](TODO.md) for remaining Web Push, offline queue, production deployment, and growth work.
